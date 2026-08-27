@@ -18,66 +18,105 @@
         <span class="brand-name">Model Setup Hub</span>
       </div>
 
-      <nav class="nav">
-        <a href="#system" class="nav-item is-active" data-section="system">System</a>
-        <a href="#ollama" class="nav-item" data-section="ollama">Ollama</a>
+      <nav class="nav" aria-label="Sections">
+        <span class="nav-caption">Tools</span>
+        <a href="#system" class="nav-item is-active" data-section="system">
+          <span class="nav-glyph">▤</span> System
+        </a>
+        <a href="#ollama" class="nav-item" data-section="ollama">
+          <span class="nav-glyph">◈</span> Ollama
+        </a>
       </nav>
+
+      <div class="sidebar-foot">
+        <span class="status-dot" id="host-dot"></span>
+        <span class="host-label" id="host-label">connecting…</span>
+      </div>
     </aside>
 
     <main class="main">
+      <div class="main-inner">
 
-      <section id="system" class="panel-section is-visible">
-        <header class="section-head">
-          <h1>System</h1>
+        <section id="system" class="panel-section is-visible" aria-labelledby="system-title">
+          <header class="section-head">
+            <div class="section-heading">
+              <h1 id="system-title">System</h1>
+              <p class="section-note">Hardware and software profile reported by the core scanner.</p>
+            </div>
 
-          <div class="section-actions">
-            <span class="scan-meta" id="scan-meta"></span>
-            <button type="button" class="btn" id="btn-rescan">Rescan</button>
-          </div>
-        </header>
+            <div class="section-actions">
+              <span class="scan-meta" id="scan-meta" aria-live="polite"></span>
+              <button type="button" class="btn" id="btn-rescan">Rescan</button>
+            </div>
+          </header>
 
-        <div class="alert is-hidden" id="system-error" role="alert"></div>
+          <div class="alert is-hidden" id="system-error" role="alert"></div>
 
-        <div class="card-grid" id="system-cards"></div>
+          <div class="card-grid" id="system-cards"></div>
 
-        <div class="subsection">
-          <h2 class="subsection-title">Software</h2>
-          <div class="spec-table" id="software-specs"></div>
-        </div>
-
-        <div class="subsection">
-          <h2 class="subsection-title">Hardware</h2>
-
-          <div class="spec-group">
-            <h3 class="spec-group-title">Processor</h3>
-            <div class="spec-table" id="cpu-specs"></div>
-          </div>
-
-          <div class="spec-group">
-            <h3 class="spec-group-title">Memory</h3>
-            <div class="spec-table" id="memory-specs"></div>
-            <div class="tile-list" id="memory-modules"></div>
-          </div>
-
-          <div class="spec-group">
-            <h3 class="spec-group-title">Graphics</h3>
-            <div class="spec-table" id="gpu-specs"></div>
-            <div class="tile-list" id="gpu-devices"></div>
+          <div class="subsection">
+            <h2 class="subsection-title">Software</h2>
+            <div class="group-grid">
+              <div class="spec-group">
+                <h3 class="spec-group-title">Operating system</h3>
+                <div class="spec-table" id="software-specs"></div>
+              </div>
+              <div class="spec-group">
+                <h3 class="spec-group-title">Runtime</h3>
+                <div class="spec-table" id="runtime-specs"></div>
+              </div>
+            </div>
           </div>
 
-          <div class="spec-group">
-            <h3 class="spec-group-title">Storage</h3>
-            <div class="tile-list" id="storage-drives"></div>
+          <div class="subsection">
+            <h2 class="subsection-title">Hardware</h2>
+
+            <div class="group-stack">
+              <div class="spec-group">
+                <h3 class="spec-group-title">Processor</h3>
+                <div class="spec-table is-split" id="cpu-specs"></div>
+              </div>
+
+              <div class="spec-group">
+                <h3 class="spec-group-title">Memory</h3>
+                <div class="spec-table is-split" id="memory-specs"></div>
+                <div class="tile-list" id="memory-modules"></div>
+              </div>
+
+              <div class="spec-group">
+                <h3 class="spec-group-title">Graphics</h3>
+                <div class="spec-table is-split" id="gpu-specs"></div>
+                <div class="tile-list" id="gpu-devices"></div>
+              </div>
+
+              <div class="spec-group">
+                <h3 class="spec-group-title">Storage</h3>
+                <div class="tile-list" id="storage-drives"></div>
+              </div>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section id="ollama" class="panel-section">
-        <h1>Ollama</h1>
+        <section id="ollama" class="panel-section" aria-labelledby="ollama-title">
+          <header class="section-head">
+            <div class="section-heading">
+              <h1 id="ollama-title">Ollama</h1>
+              <p class="section-note">Runtime state and locally installed models.</p>
+            </div>
+          </header>
 
-        <div class="model-list" id="model-list"></div>
-      </section>
+          <div class="subsection is-flush">
+            <h2 class="subsection-title">Runtime</h2>
+            <div class="spec-table" id="ollama-specs"></div>
+          </div>
 
+          <div class="subsection">
+            <h2 class="subsection-title">Models</h2>
+            <div class="model-list" id="model-list"></div>
+          </div>
+        </section>
+
+      </div>
     </main>
   </div>
 
