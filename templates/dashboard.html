@@ -27,9 +27,49 @@
     <main class="main">
 
       <section id="system" class="panel-section is-visible">
-        <h1>System</h1>
+        <header class="section-head">
+          <h1>System</h1>
+
+          <div class="section-actions">
+            <span class="scan-meta" id="scan-meta"></span>
+            <button type="button" class="btn" id="btn-rescan">Rescan</button>
+          </div>
+        </header>
+
+        <div class="alert is-hidden" id="system-error" role="alert"></div>
 
         <div class="card-grid" id="system-cards"></div>
+
+        <div class="subsection">
+          <h2 class="subsection-title">Software</h2>
+          <div class="spec-table" id="software-specs"></div>
+        </div>
+
+        <div class="subsection">
+          <h2 class="subsection-title">Hardware</h2>
+
+          <div class="spec-group">
+            <h3 class="spec-group-title">Processor</h3>
+            <div class="spec-table" id="cpu-specs"></div>
+          </div>
+
+          <div class="spec-group">
+            <h3 class="spec-group-title">Memory</h3>
+            <div class="spec-table" id="memory-specs"></div>
+            <div class="tile-list" id="memory-modules"></div>
+          </div>
+
+          <div class="spec-group">
+            <h3 class="spec-group-title">Graphics</h3>
+            <div class="spec-table" id="gpu-specs"></div>
+            <div class="tile-list" id="gpu-devices"></div>
+          </div>
+
+          <div class="spec-group">
+            <h3 class="spec-group-title">Storage</h3>
+            <div class="tile-list" id="storage-drives"></div>
+          </div>
+        </div>
       </section>
 
       <section id="ollama" class="panel-section">
