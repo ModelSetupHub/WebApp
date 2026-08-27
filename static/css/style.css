@@ -1,0 +1,234 @@
+:root {
+  --bg: #0F1214;
+  --panel: #171B1E;
+  --panel-raised: #1D2226;
+  --border-soft: #23282D;
+
+  --text: #E8E6E1;
+  --text-dim: #9AA0A6;
+  --text-faint: #5C6268;
+
+  --accent-green: #6FCF97;
+  --accent-green-dim: #3E5E4C;
+  --accent-amber: #E0A458;
+  --accent-amber-dim: #5E4E33;
+
+  --font-ui: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  --radius: 8px;
+  --radius-sm: 5px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+a { color: inherit; text-decoration: none; }
+
+/* ---------- Shell ---------- */
+
+.app-shell {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  min-height: 100vh;
+}
+
+/* ---------- Sidebar ---------- */
+
+.sidebar {
+  background: var(--panel);
+  border-right: 1px solid var(--border-soft);
+  padding: 20px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 4px 6px;
+}
+
+.brand-mark {
+  font-size: 16px;
+  color: var(--accent-green);
+}
+
+.brand-name {
+  font-weight: 600;
+  font-size: 13.5px;
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nav-item {
+  padding: 9px 10px;
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  font-size: 13.5px;
+  font-weight: 500;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.nav-item:hover {
+  background: var(--panel-raised);
+  color: var(--text);
+}
+
+.nav-item.is-active {
+  background: var(--accent-green-dim);
+  color: var(--accent-green);
+}
+
+/* ---------- Main ---------- */
+
+.main {
+  padding: 28px 32px;
+  max-width: 720px;
+}
+
+.main h1 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 18px;
+}
+
+/* ---------- Sections ---------- */
+
+.panel-section { display: none; }
+.panel-section.is-visible {
+  display: block;
+  animation: fade-in 0.15s ease;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- Cards ---------- */
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+.card-label {
+  font-size: 11px;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.card-value {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.card-value.is-unknown {
+  color: var(--text-faint);
+  font-weight: 500;
+}
+
+.card-sub {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-top: 6px;
+}
+
+/* ---------- Model list ---------- */
+
+.model-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.model-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+}
+
+.model-name {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  flex: 1;
+}
+
+.model-size {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.chip {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  padding: 3px 9px;
+  border-radius: 20px;
+}
+
+.chip-ready { background: var(--accent-green-dim); color: var(--accent-green); }
+.chip-loading { background: var(--accent-amber-dim); color: var(--accent-amber); }
+
+.empty-state {
+  color: var(--text-faint);
+  font-size: 13px;
+  padding: 20px 4px;
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 640px) {
+  .app-shell { grid-template-columns: 1fr; }
+  .sidebar {
+    flex-direction: row;
+    align-items: center;
+    border-right: none;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .nav { flex-direction: row; }
+  .main { padding: 18px; }
+}
+
+/* ---------- Accessibility ---------- */
+
+:focus-visible {
+  outline: 2px solid var(--accent-green);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}

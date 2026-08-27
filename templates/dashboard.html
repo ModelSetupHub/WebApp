@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Model Setup Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+  <div class="app-shell">
+
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="brand-mark">◆</span>
+        <span class="brand-name">Model Setup Hub</span>
+      </div>
+
+      <nav class="nav">
+        <a href="#system" class="nav-item is-active" data-section="system">System</a>
+        <a href="#ollama" class="nav-item" data-section="ollama">Ollama</a>
+      </nav>
+    </aside>
+
+    <main class="main">
+
+      <section id="system" class="panel-section is-visible">
+        <h1>System</h1>
+
+        <div class="card-grid" id="system-cards"></div>
+      </section>
+
+      <section id="ollama" class="panel-section">
+        <h1>Ollama</h1>
+
+        <div class="model-list" id="model-list"></div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
