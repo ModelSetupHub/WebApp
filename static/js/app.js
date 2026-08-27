@@ -58,6 +58,34 @@ function skeletons(count) {
   return Array.from({ length: count }, () => `<div class="skeleton"></div>`).join("");
 }
 
+function showAlert(el, message) {
+  el.textContent = message;
+  el.classList.remove("is-hidden");
+}
+
+function hideAlert(el) {
+  el.classList.add("is-hidden");
+}
+
+async function api(path, options = {}) {
+  const res = await fetch(path, options);
+  const data = await res.json();
+
+  if (!data.ok) {
+    throw new Error(data.error || `Request failed (${res.status})`);
+  }
+
+  return data;
+}
+
+function postJson(path, payload) {
+  return api(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
 // ---------------------------------------------------------------------------
 // System
 // ---------------------------------------------------------------------------
@@ -93,8 +121,7 @@ function clearSystemPanels() {
 }
 
 function showSystemError(message) {
-  systemErrorEl.textContent = `System scan failed — ${message}`;
-  systemErrorEl.classList.remove("is-hidden");
+  showAlert(systemErrorEl, `System scan failed — ${message}`);
   clearSystemPanels();
   setHostStatus("offline", "scan failed");
 }
@@ -294,7 +321,7 @@ async function loadSystem({ refresh = false } = {}) {
       return;
     }
 
-    systemErrorEl.classList.add("is-hidden");
+    hideAlert(systemErrorEl);
 
     const profile = data.profile;
     renderSummary(profile);
@@ -317,38 +344,493 @@ async function loadSystem({ refresh = false } = {}) {
 rescanBtn.addEventListener("click", () => loadSystem({ refresh: true }));
 
 // ---------------------------------------------------------------------------
-// Ollama
+// Ollama runtime
 // ---------------------------------------------------------------------------
 
-async function loadOllama() {
-  const specsEl = document.getElementById("ollama-specs");
-  const listEl = document.getElementById("model-list");
+const ollamaErrorEl = document.getElementById("ollama-error");
+const refreshStatusBtn = document.getElementById("btn-refresh-status");
 
-  const res = await fetch("/api/ollama");
-  const data = await res.json();
+// Cached so the Models page can tell "no models installed" apart from
+// "Ollama is not running", which produce the same empty table.
+let ollamaStatus = null;
 
-  specsEl.innerHTML = specRows([
-    ["Service", data.running === null || data.running === undefined ? null : data.running ? "running" : "stopped"],
-    ["Version", data.version],
-    ["Models installed", (data.models || []).length || null],
-  ]);
+function statusChip(state, label) {
+  const cls = state === true ? "chip-ready" : state === false ? "chip-loading" : "chip-neutral";
+  return `<span class="chip ${cls}">${escapeHtml(label)}</span>`;
+}
 
-  if (!data.models || data.models.length === 0) {
-    listEl.innerHTML = `<div class="empty-state">No models found.</div>`;
+async function loadOllamaStatus() {
+  refreshStatusBtn.disabled = true;
+  document.getElementById("ollama-cards").innerHTML = skeletons(3);
+
+  try {
+    const { data } = await api("/api/ollama/status");
+    ollamaStatus = data;
+    hideAlert(ollamaErrorEl);
+
+    document.getElementById("ollama-cards").innerHTML = `
+      <div class="card">
+        <div class="card-label">Installed</div>
+        <div class="card-value">${data.installed ? "yes" : "no"}</div>
+        <div class="card-sub">${data.installed ? "binary found on PATH" : "ollama binary not found"}</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Server</div>
+        <div class="card-value">${data.running ? "running" : "stopped"}</div>
+        <div class="card-sub">local API on port 11434</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Version</div>
+        <div class="card-value">${escapeHtml(fmt(data.version))}</div>
+      </div>
+    `;
+
+    document.getElementById("ollama-specs").innerHTML = specRows([
+      ["Installed", data.installed ? "yes" : "no"],
+      ["Server running", data.running ? "yes" : "no"],
+      ["Version", data.version],
+    ]);
+  } catch (error) {
+    ollamaStatus = null;
+    showAlert(ollamaErrorEl, `Could not read Ollama status — ${error.message}`);
+    document.getElementById("ollama-cards").innerHTML = "";
+    document.getElementById("ollama-specs").innerHTML = "";
+  } finally {
+    refreshStatusBtn.disabled = false;
+  }
+}
+
+refreshStatusBtn.addEventListener("click", loadOllamaStatus);
+
+// ---------------------------------------------------------------------------
+// Models — console
+// ---------------------------------------------------------------------------
+
+const consoleEl = document.getElementById("console");
+
+function writeConsole(call, text, { isError = false } = {}) {
+  const time = new Date().toLocaleTimeString();
+  const body = String(text ?? "").trim() || "(no output)";
+
+  consoleEl.innerHTML = `
+    <div class="console-head">
+      <span class="console-call">${escapeHtml(call)}</span>
+      ${statusChip(!isError, isError ? "failed" : "ok")}
+      <span class="console-time">${escapeHtml(time)}</span>
+    </div>
+    <pre class="console-body${isError ? " is-error" : ""}">${escapeHtml(body)}</pre>
+  `;
+  consoleEl.scrollTop = 0;
+}
+
+function writeConsolePending(call) {
+  consoleEl.innerHTML = `
+    <div class="console-head">
+      <span class="console-call">${escapeHtml(call)}</span>
+      ${statusChip(null, "running…")}
+    </div>
+    <div class="skeleton" style="height:58px"></div>
+  `;
+}
+
+/** Run one core call, reporting its outcome in the output panel. */
+async function runAction(call, work, { onSuccess, refresh = true } = {}) {
+  writeConsolePending(call);
+
+  try {
+    const result = await work();
+    writeConsole(call, onSuccess ? onSuccess(result) : result.data);
+
+    if (refresh) {
+      await loadModels({ quiet: true });
+    }
+
+    return true;
+  } catch (error) {
+    writeConsole(call, error.message, { isError: true });
+    return false;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Models — tables
+// ---------------------------------------------------------------------------
+
+const modelsErrorEl = document.getElementById("models-error");
+const modelsMetaEl = document.getElementById("models-meta");
+const refreshModelsBtn = document.getElementById("btn-refresh-models");
+
+// Names from the installed list, used to repopulate the action dropdowns.
+let installedModels = [];
+
+function emptyTableNote() {
+  if (ollamaStatus && ollamaStatus.installed === false) {
+    return "Ollama is not installed, so no models can be listed.";
+  }
+  if (ollamaStatus && ollamaStatus.running === false) {
+    return "The Ollama server is not running.";
+  }
+  return "No models installed.";
+}
+
+function renderModelsTable(table) {
+  const el = document.getElementById("models-table");
+  const rows = table.rows || [];
+
+  if (rows.length === 0) {
+    el.innerHTML = `<div class="empty-state">${escapeHtml(emptyTableNote())}</div>`;
     return;
   }
 
-  listEl.innerHTML = data.models
-    .map(
-      (m) => `
-      <div class="model-row">
-        <span class="model-name">${escapeHtml(m.name)}</span>
-        <span class="model-size">${fmt(m.size_gb, " GB")}</span>
-        <span class="chip ${m.status === "ready" ? "chip-ready" : "chip-loading"}">${escapeHtml(m.status || "unknown")}</span>
-      </div>`
-    )
+  const headers = (table.columns || []).map((c) => `<th>${escapeHtml(c)}</th>`).join("");
+
+  const body = rows
+    .map((row) => {
+      const name = row.name || "";
+      const cells = (table.columns || [])
+        .map((col, i) => {
+          const cls = i === 0 ? ' class="cell-name"' : "";
+          return `<td${cls}>${escapeHtml(fmt(row[col]))}</td>`;
+        })
+        .join("");
+
+      return `
+        <tr>
+          ${cells}
+          <td class="cell-actions">
+            <div class="btn-row">
+              <button type="button" class="btn btn-sm" data-act="info" data-model="${escapeHtml(name)}">Info</button>
+              <button type="button" class="btn btn-sm" data-act="load" data-model="${escapeHtml(name)}">Load</button>
+              <button type="button" class="btn btn-sm" data-act="stop" data-model="${escapeHtml(name)}">Stop</button>
+              <button type="button" class="btn btn-sm btn-danger" data-act="remove" data-model="${escapeHtml(name)}">Remove</button>
+            </div>
+          </td>
+        </tr>`;
+    })
     .join("");
+
+  el.innerHTML = `
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr>${headers}<th></th></tr></thead>
+        <tbody>${body}</tbody>
+      </table>
+    </div>`;
 }
 
+function renderRunningTable(table) {
+  const el = document.getElementById("running-table");
+  const rows = table.rows || [];
+
+  if (rows.length === 0) {
+    el.innerHTML = `<div class="empty-state">No model is currently loaded in memory.</div>`;
+    return;
+  }
+
+  const headers = (table.columns || []).map((c) => `<th>${escapeHtml(c)}</th>`).join("");
+
+  const body = rows
+    .map((row) => {
+      const name = row.name || "";
+      const cells = (table.columns || [])
+        .map((col, i) => {
+          const cls = i === 0 ? ' class="cell-name"' : "";
+          return `<td${cls}>${escapeHtml(fmt(row[col]))}</td>`;
+        })
+        .join("");
+
+      return `
+        <tr>
+          ${cells}
+          <td class="cell-actions">
+            <div class="btn-row">
+              <button type="button" class="btn btn-sm btn-danger" data-act="stop" data-model="${escapeHtml(name)}">Stop</button>
+            </div>
+          </td>
+        </tr>`;
+    })
+    .join("");
+
+  el.innerHTML = `
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr>${headers}<th></th></tr></thead>
+        <tbody>${body}</tbody>
+      </table>
+    </div>`;
+}
+
+function syncModelSelects() {
+  document.querySelectorAll("[data-model-select]").forEach((select) => {
+    const previous = select.value;
+
+    if (installedModels.length === 0) {
+      select.innerHTML = `<option value="">no models installed</option>`;
+      select.disabled = true;
+      return;
+    }
+
+    select.disabled = false;
+    select.innerHTML = installedModels
+      .map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`)
+      .join("");
+
+    if (installedModels.includes(previous)) {
+      select.value = previous;
+    }
+  });
+}
+
+function renderModelsCards(installed, running) {
+  document.getElementById("models-cards").innerHTML = `
+    <div class="card">
+      <div class="card-label">Installed</div>
+      <div class="card-value">${installed}</div>
+      <div class="card-sub">models on disk</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Loaded</div>
+      <div class="card-value">${running}</div>
+      <div class="card-sub">models resident in memory</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Server</div>
+      <div class="card-value">${ollamaStatus ? (ollamaStatus.running ? "running" : "stopped") : "—"}</div>
+      <div class="card-sub">${ollamaStatus ? escapeHtml(fmt(ollamaStatus.version, " · ollama")) : "status unknown"}</div>
+    </div>
+  `;
+}
+
+async function loadModels({ quiet = false } = {}) {
+  refreshModelsBtn.disabled = true;
+
+  if (!quiet) {
+    modelsMetaEl.textContent = "Loading…";
+    document.getElementById("models-cards").innerHTML = skeletons(3);
+  }
+
+  try {
+    const [listRes, runningRes] = await Promise.all([
+      api("/api/ollama/models"),
+      api("/api/ollama/models/running"),
+    ]);
+
+    hideAlert(modelsErrorEl);
+
+    const list = listRes.data;
+    const running = runningRes.data;
+
+    installedModels = (list.rows || []).map((row) => row.name).filter(Boolean);
+
+    renderModelsCards(installedModels.length, (running.rows || []).length);
+    renderModelsTable(list);
+    renderRunningTable(running);
+    syncModelSelects();
+
+    modelsMetaEl.textContent = `Updated ${new Date().toLocaleTimeString()}`;
+  } catch (error) {
+    showAlert(modelsErrorEl, `Could not list models — ${error.message}`);
+    modelsMetaEl.textContent = "";
+  } finally {
+    refreshModelsBtn.disabled = false;
+  }
+}
+
+refreshModelsBtn.addEventListener("click", () => loadModels());
+
+// ---------------------------------------------------------------------------
+// Models — actions
+// ---------------------------------------------------------------------------
+
+/** Render the sections returned by show_model_info as plain text. */
+function formatModelInfo(data) {
+  if (!data.sections || data.sections.length === 0) {
+    return data.raw || "";
+  }
+
+  return data.sections
+    .map((section) => {
+      const rows = section.rows
+        .map(([key, value]) => `  ${key.padEnd(20)}${value}`)
+        .join("\n");
+      return `${section.title}\n${rows}`;
+    })
+    .join("\n\n");
+}
+
+function rowAction(act, model) {
+  if (act === "info") {
+    return runAction(
+      `show_model_info("${model}")`,
+      () => api(`/api/ollama/models/info?model=${encodeURIComponent(model)}`),
+      { onSuccess: (res) => formatModelInfo(res.data), refresh: false }
+    );
+  }
+
+  if (act === "load") {
+    return runAction(
+      `load_model("${model}")`,
+      () => postJson("/api/ollama/models/load", { model, keep_alive: "10m" }),
+      {
+        onSuccess: (res) =>
+          res.already_loaded
+            ? `Model "${model}" is already loaded.`
+            : `Model "${model}" loaded into memory.`,
+      }
+    );
+  }
+
+  if (act === "stop") {
+    return runAction(
+      `stop_model("${model}")`,
+      () => postJson("/api/ollama/models/stop", { model }),
+      { onSuccess: (res) => res.data || `Model "${model}" stopped.` }
+    );
+  }
+
+  if (act === "remove") {
+    // Deleting a model is not recoverable from this UI, so confirm first.
+    if (!window.confirm(`Remove "${model}" from local Ollama storage? This cannot be undone.`)) {
+      return Promise.resolve(false);
+    }
+
+    return runAction(
+      `remove_model("${model}")`,
+      () => postJson("/api/ollama/models/remove", { model }),
+      { onSuccess: (res) => res.data || `Model "${model}" removed.` }
+    );
+  }
+
+  return Promise.resolve(false);
+}
+
+// Rows are re-rendered on every refresh, so listen on the containers instead
+// of binding each button.
+["models-table", "running-table"].forEach((id) => {
+  document.getElementById(id).addEventListener("click", (event) => {
+    const button = event.target.closest("[data-act]");
+
+    if (!button) {
+      return;
+    }
+
+    rowAction(button.dataset.act, button.dataset.model);
+  });
+});
+
+document.getElementById("form-run").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const model = form.model.value;
+  const prompt = form.prompt.value;
+
+  if (!model) {
+    writeConsole("run_model", "Select a model first.", { isError: true });
+    return;
+  }
+
+  if (!prompt.trim()) {
+    writeConsole("run_model", "Enter a prompt first.", { isError: true });
+    return;
+  }
+
+  runAction(
+    `run_model("${model}")`,
+    () => postJson("/api/ollama/models/run", { model, prompt }),
+    { refresh: false }
+  );
+});
+
+document.getElementById("form-load").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const model = form.model.value;
+  const keepAlive = form.keep_alive.value.trim() || "10m";
+
+  if (!model) {
+    writeConsole("load_model", "Select a model first.", { isError: true });
+    return;
+  }
+
+  runAction(
+    `load_model("${model}", keep_alive="${keepAlive}")`,
+    () => postJson("/api/ollama/models/load", { model, keep_alive: keepAlive }),
+    {
+      onSuccess: (res) =>
+        res.already_loaded
+          ? `Model "${model}" is already loaded.`
+          : `Model "${model}" loaded into memory.`,
+    }
+  );
+});
+
+document.getElementById("form-add").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const name = form.model_name.value.trim();
+  const path = form.model_path.value.trim();
+
+  if (!name || !path) {
+    writeConsole("add_model", "Both a model name and a file path are required.", { isError: true });
+    return;
+  }
+
+  runAction(
+    `add_model("${name}")`,
+    () => postJson("/api/ollama/models/add", { model_name: name, model_path: path }),
+    { onSuccess: (res) => res.data || `Model "${name}" created.` }
+  );
+});
+
+const CONFIG_PARAMS = [
+  "num_ctx",
+  "temperature",
+  "top_p",
+  "top_k",
+  "repeat_penalty",
+  "num_predict",
+];
+
+document.getElementById("form-configure").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const source = form.source_model.value;
+  const target = form.target_model.value.trim();
+
+  const parameters = {};
+  CONFIG_PARAMS.forEach((key) => {
+    const value = form[key].value.trim();
+    if (value !== "") {
+      parameters[key] = Number(value);
+    }
+  });
+
+  if (!source || !target) {
+    writeConsole("configure_model", "A source model and a new model name are required.", { isError: true });
+    return;
+  }
+
+  if (Object.keys(parameters).length === 0) {
+    writeConsole("configure_model", "Set at least one parameter.", { isError: true });
+    return;
+  }
+
+  runAction(
+    `configure_model("${source}" -> "${target}")`,
+    () =>
+      postJson("/api/ollama/models/configure", {
+        source_model: source,
+        target_model: target,
+        parameters,
+      }),
+    { onSuccess: (res) => res.data || `Model "${target}" created from "${source}".` }
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Boot
+// ---------------------------------------------------------------------------
+
 loadSystem();
-loadOllama();
+// Status first, so the models tables can explain an empty list.
+loadOllamaStatus().then(() => loadModels());

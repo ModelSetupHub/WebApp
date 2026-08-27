@@ -26,6 +26,12 @@
         <a href="#ollama" class="nav-item" data-section="ollama">
           <span class="nav-glyph">◈</span> Ollama
         </a>
+        <a href="#models" class="nav-item" data-section="models">
+          <span class="nav-glyph">◇</span> Models
+        </a>
+        <a href="#benchmark" class="nav-item" data-section="benchmark">
+          <span class="nav-glyph">◎</span> Benchmark
+        </a>
       </nav>
 
       <div class="sidebar-foot">
@@ -101,18 +107,195 @@
           <header class="section-head">
             <div class="section-heading">
               <h1 id="ollama-title">Ollama</h1>
-              <p class="section-note">Runtime state and locally installed models.</p>
+              <p class="section-note">Installation and server process. Install and start/stop are not wired yet.</p>
+            </div>
+
+            <div class="section-actions">
+              <button type="button" class="btn" id="btn-refresh-status">Refresh</button>
             </div>
           </header>
 
-          <div class="subsection is-flush">
+          <div class="alert is-hidden" id="ollama-error" role="alert"></div>
+
+          <div class="card-grid" id="ollama-cards"></div>
+
+          <div class="subsection">
             <h2 class="subsection-title">Runtime</h2>
-            <div class="spec-table" id="ollama-specs"></div>
+            <div class="spec-table is-split" id="ollama-specs"></div>
           </div>
 
           <div class="subsection">
-            <h2 class="subsection-title">Models</h2>
-            <div class="model-list" id="model-list"></div>
+            <h2 class="subsection-title">Process control</h2>
+            <div class="empty-state">
+              Install, start and stop live in <code>core.ollama.runtime</code> and are not
+              connected to this page yet.
+            </div>
+          </div>
+        </section>
+
+        <section id="models" class="panel-section" aria-labelledby="models-title">
+          <header class="section-head">
+            <div class="section-heading">
+              <h1 id="models-title">Models</h1>
+              <p class="section-note">Installed and running Ollama models, and every action core exposes for them.</p>
+            </div>
+
+            <div class="section-actions">
+              <span class="scan-meta" id="models-meta" aria-live="polite"></span>
+              <button type="button" class="btn" id="btn-refresh-models">Refresh</button>
+            </div>
+          </header>
+
+          <div class="alert is-hidden" id="models-error" role="alert"></div>
+
+          <div class="card-grid" id="models-cards"></div>
+
+          <div class="subsection">
+            <h2 class="subsection-title">Installed models</h2>
+            <p class="hint">list_models · show_model_info · load_model · stop_model · remove_model</p>
+            <div id="models-table"></div>
+          </div>
+
+          <div class="subsection">
+            <h2 class="subsection-title">Running models</h2>
+            <p class="hint">list_running_models</p>
+            <div id="running-table"></div>
+          </div>
+
+          <div class="subsection">
+            <h2 class="subsection-title">Actions</h2>
+
+            <div class="group-grid">
+
+              <form class="panel-form" id="form-run" novalidate>
+                <h3 class="form-title">Run a prompt</h3>
+                <p class="hint">run_model</p>
+
+                <label class="field">
+                  <span class="field-label">Model</span>
+                  <select class="input" name="model" data-model-select required></select>
+                </label>
+
+                <label class="field">
+                  <span class="field-label">Prompt</span>
+                  <textarea class="input" name="prompt" rows="4" placeholder="Explain what a GGUF file is."></textarea>
+                </label>
+
+                <div class="form-foot">
+                  <button type="submit" class="btn btn-primary">Run</button>
+                </div>
+              </form>
+
+              <form class="panel-form" id="form-load" novalidate>
+                <h3 class="form-title">Load into memory</h3>
+                <p class="hint">load_model</p>
+
+                <label class="field">
+                  <span class="field-label">Model</span>
+                  <select class="input" name="model" data-model-select required></select>
+                </label>
+
+                <label class="field">
+                  <span class="field-label">Keep alive</span>
+                  <input class="input" name="keep_alive" value="10m" placeholder="10m">
+                  <span class="field-hint">How long to hold the model in memory, e.g. 10m or 1h.</span>
+                </label>
+
+                <div class="form-foot">
+                  <button type="submit" class="btn btn-primary">Load</button>
+                </div>
+              </form>
+
+              <form class="panel-form" id="form-add" novalidate>
+                <h3 class="form-title">Add a local model file</h3>
+                <p class="hint">add_model</p>
+
+                <label class="field">
+                  <span class="field-label">New model name</span>
+                  <input class="input" name="model_name" placeholder="my-model">
+                </label>
+
+                <label class="field">
+                  <span class="field-label">Model file path</span>
+                  <input class="input" name="model_path" placeholder="D:\models\model.gguf">
+                  <span class="field-hint">Absolute path to a GGUF file on this machine.</span>
+                </label>
+
+                <div class="form-foot">
+                  <button type="submit" class="btn btn-primary">Add</button>
+                </div>
+              </form>
+
+              <form class="panel-form" id="form-configure" novalidate>
+                <h3 class="form-title">Create a configured copy</h3>
+                <p class="hint">configure_model</p>
+
+                <label class="field">
+                  <span class="field-label">Source model</span>
+                  <select class="input" name="source_model" data-model-select required></select>
+                </label>
+
+                <label class="field">
+                  <span class="field-label">New model name</span>
+                  <input class="input" name="target_model" placeholder="my-model-8k">
+                </label>
+
+                <div class="param-grid">
+                  <label class="field">
+                    <span class="field-label">num_ctx</span>
+                    <input class="input" name="num_ctx" type="number" min="1" placeholder="8192">
+                  </label>
+                  <label class="field">
+                    <span class="field-label">temperature</span>
+                    <input class="input" name="temperature" type="number" step="0.05" min="0" placeholder="0.7">
+                  </label>
+                  <label class="field">
+                    <span class="field-label">top_p</span>
+                    <input class="input" name="top_p" type="number" step="0.05" min="0" max="1" placeholder="0.9">
+                  </label>
+                  <label class="field">
+                    <span class="field-label">top_k</span>
+                    <input class="input" name="top_k" type="number" min="1" placeholder="40">
+                  </label>
+                  <label class="field">
+                    <span class="field-label">repeat_penalty</span>
+                    <input class="input" name="repeat_penalty" type="number" step="0.05" min="0" placeholder="1.1">
+                  </label>
+                  <label class="field">
+                    <span class="field-label">num_predict</span>
+                    <input class="input" name="num_predict" type="number" placeholder="256">
+                  </label>
+                </div>
+
+                <span class="field-hint">Blank parameters are omitted. The source model is left untouched.</span>
+
+                <div class="form-foot">
+                  <button type="submit" class="btn btn-primary">Create</button>
+                </div>
+              </form>
+
+            </div>
+          </div>
+
+          <div class="subsection">
+            <h2 class="subsection-title">Output</h2>
+            <div class="console" id="console">
+              <div class="empty-state">No action run yet.</div>
+            </div>
+          </div>
+        </section>
+
+        <section id="benchmark" class="panel-section" aria-labelledby="benchmark-title">
+          <header class="section-head">
+            <div class="section-heading">
+              <h1 id="benchmark-title">Benchmark</h1>
+              <p class="section-note">Compare model configurations to find the best one. Not wired yet.</p>
+            </div>
+          </header>
+
+          <div class="empty-state">
+            <code>core.ollama.experiment</code> exposes run_test and compare_tests.
+            This page is a placeholder until those are connected.
           </div>
         </section>
 
