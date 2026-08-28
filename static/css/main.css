@@ -18,5 +18,6 @@
 @import url("components/tables.css");
 @import url("components/forms.css");
 @import url("components/console.css");
+@import url("components/benchmark.css");
 
 @import url("base/responsive.css");

@@ -1,0 +1,798 @@
+// Benchmark tab controller: assemble a set of configurations, run compare_tests
+// in the background, and poll until it settles.
+//
+// The run is a background job on the server, so the browser's job is to keep the
+// builder and the poller in agreement about what is happening: while a job is
+// running every control that would change the setup is disabled, because the run
+// already has its own copy of it.
+
+import { api, postJson } from "../lib/api.js";
+import { escapeHtml, hideAlert, showAlert } from "../lib/format.js";
+import { getInstalledModels, getOllamaStatus } from "../lib/state.js";
+import { setButtonBusy, toast } from "../lib/toast.js";
+import {
+  addConfigurations,
+  clearConfigurations,
+  duplicateConfiguration,
+  getConfiguration,
+  getConfigurations,
+  removeConfiguration,
+  toPayload,
+  updateConfiguration,
+  addConfiguration,
+} from "./benchmark_store.js";
+import {
+  buildEditor,
+  fillEditor,
+  focusEditor,
+  readEditor,
+  resetEditor,
+} from "./benchmark_editor.js";
+import { renderConfigList } from "./benchmark_render.js";
+import { renderResults } from "./benchmark_results.js";
+
+// A single prompt can take a minute on a large model, so polling is deliberately
+// slow; the elapsed clock is interpolated between polls instead.
+const POLL_INTERVAL_MS = 1500;
+
+const errorEl = document.getElementById("bench-error");
+const metaEl = document.getElementById("bench-meta");
+const cardsEl = document.getElementById("bench-cards");
+
+const modelEl = document.getElementById("bench-model");
+const promptsEl = document.getElementById("bench-prompts");
+const includeOutputEl = document.getElementById("bench-include-output");
+
+const configListEl = document.getElementById("bench-config-list");
+const configCountEl = document.getElementById("bench-config-count");
+const addBtn = document.getElementById("btn-config-add");
+const importBtn = document.getElementById("btn-config-import");
+const clearBtn = document.getElementById("btn-config-clear");
+
+const editorEl = document.getElementById("bench-editor");
+const editorTitleEl = document.getElementById("bench-editor-title");
+const editorSaveBtn = document.getElementById("btn-editor-save");
+
+const importEl = document.getElementById("bench-import");
+const dropzoneEl = document.getElementById("bench-dropzone");
+const fileEl = document.getElementById("bench-file");
+const pasteEl = document.getElementById("bench-paste-text");
+const previewEl = document.getElementById("bench-import-preview");
+
+const runBtn = document.getElementById("btn-bench-run");
+const runStateEl = document.getElementById("bench-run-state");
+const runNoteEl = document.getElementById("bench-run-note");
+const progressEl = document.getElementById("bench-progress");
+const resultsEl = document.getElementById("bench-results");
+const exportBtn = document.getElementById("btn-bench-export");
+
+// Id of the configuration being edited, or null when the editor is adding a new
+// one. Options the schema has no field for are held here across a save.
+let editingId = null;
+let editingExtras = {};
+
+// The last parsed-but-not-yet-applied import.
+let pendingImport = null;
+
+let pollTimer = null;
+let isRunning = false;
+
+/**
+ * Read the prompt textarea into a list.
+ *
+ * Prompts are separated by a blank line so a single prompt can still span
+ * several lines, which is what a realistic test prompt usually does.
+ *
+ * @returns {string[]} Non-empty prompts.
+ */
+function readPrompts() {
+  return promptsEl.value
+    .split(/\n\s*\n/)
+    .map((block) => block.trim())
+    .filter(Boolean);
+}
+
+/** Paint the four summary cards at the top of the tab. */
+function renderCards() {
+  const configurations = getConfigurations();
+  const prompts = readPrompts();
+  const runs = configurations.length * prompts.length;
+  const status = getOllamaStatus();
+  const serverUp = status ? status.running : null;
+
+  cardsEl.innerHTML = `
+    <div class="card">
+      <div class="card-label">Configurations</div>
+      <div class="card-value">${configurations.length}</div>
+      <div class="card-sub">compared against one model</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Prompts</div>
+      <div class="card-value">${prompts.length}</div>
+      <div class="card-sub">run against every configuration</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Total runs</div>
+      <div class="card-value ${runs > 0 ? "" : "is-unknown"}">${runs || "—"}</div>
+      <div class="card-sub">generations this comparison performs</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Server</div>
+      ${
+        serverUp === null
+          ? '<div class="card-value is-unknown">—</div>'
+          : `<div class="card-value ${serverUp ? "is-good" : "is-bad"}">${serverUp ? "running" : "stopped"}</div>`
+      }
+      <div class="card-sub">${serverUp ? "ready to benchmark" : "start Ollama before running"}</div>
+    </div>`;
+}
+
+/** Refresh everything that depends on the current setup. */
+function renderSetup() {
+  const configurations = getConfigurations();
+
+  renderConfigList(configListEl);
+  renderCards();
+
+  configCountEl.textContent =
+    configurations.length === 0
+      ? "No configurations yet"
+      : `${configurations.length} configuration${configurations.length === 1 ? "" : "s"} ready`;
+
+  clearBtn.disabled = configurations.length === 0 || isRunning;
+  exportBtn.disabled = configurations.length === 0;
+
+  updateRunState();
+}
+
+/** Enable or disable the run button and explain whichever state it is in. */
+function updateRunState() {
+  if (isRunning) {
+    runStateEl.className = "control-title";
+    runStateEl.textContent = "Comparison in progress";
+    runNoteEl.textContent = "The setup is locked until this run finishes.";
+    runBtn.disabled = true;
+    return;
+  }
+
+  const configurations = getConfigurations();
+  const prompts = readPrompts();
+  const status = getOllamaStatus();
+
+  const blockers = [];
+
+  if (status && status.running === false) {
+    blockers.push("the Ollama server is not running");
+  }
+
+  if (!modelEl.value) {
+    blockers.push("no model is selected");
+  }
+
+  if (prompts.length === 0) {
+    blockers.push("no prompts were written");
+  }
+
+  if (configurations.length === 0) {
+    blockers.push("no configurations were added");
+  }
+
+  if (blockers.length > 0) {
+    runStateEl.className = "control-title is-bad";
+    runStateEl.textContent = "Not ready to run";
+    runNoteEl.textContent = `Still missing: ${blockers.join(", ")}.`;
+    runBtn.disabled = true;
+    return;
+  }
+
+  const runs = configurations.length * prompts.length;
+
+  runStateEl.className = "control-title is-good";
+  runStateEl.textContent = "Ready to run";
+  runNoteEl.textContent =
+    `${runs} generation${runs === 1 ? "" : "s"} against ${modelEl.value}. ` +
+    "Each one is timed separately, with model load time excluded.";
+  runBtn.disabled = false;
+}
+
+/**
+ * Open or close the manual editor.
+ *
+ * @param {boolean} open Whether the editor should be visible.
+ */
+function toggleEditor(open) {
+  editorEl.classList.toggle("is-hidden", !open);
+
+  if (open) {
+    toggleImport(false);
+    focusEditor();
+  }
+}
+
+/**
+ * Open or close the import drawer.
+ *
+ * @param {boolean} open Whether the drawer should be visible.
+ */
+function toggleImport(open) {
+  importEl.classList.toggle("is-hidden", !open);
+
+  if (open) {
+    editorEl.classList.add("is-hidden");
+  } else {
+    clearPreview();
+  }
+}
+
+/** Put the editor into "add a new configuration" mode. */
+function openForAdd() {
+  editingId = null;
+  editingExtras = {};
+  editorTitleEl.textContent = "Add a configuration";
+  editorSaveBtn.textContent = "Add";
+  resetEditor();
+  toggleEditor(true);
+}
+
+/**
+ * Put the editor into "edit this configuration" mode.
+ *
+ * @param {number} id Configuration id.
+ */
+function openForEdit(id) {
+  const config = getConfiguration(id);
+
+  if (!config) {
+    return;
+  }
+
+  editingId = config.id;
+  editingExtras = fillEditor(config);
+  editorTitleEl.textContent = `Edit "${config.name}"`;
+  editorSaveBtn.textContent = "Save";
+  toggleEditor(true);
+}
+
+function bindEditor() {
+  addBtn.addEventListener("click", openForAdd);
+  document.getElementById("btn-editor-close").addEventListener("click", () => toggleEditor(false));
+  document.getElementById("btn-editor-reset").addEventListener("click", () => {
+    resetEditor();
+    editingExtras = {};
+  });
+
+  editorEl.addEventListener("submit", (event) => {
+    event.preventDefault();
+
+    const draft = readEditor(editingExtras);
+
+    if (Object.keys(draft.options).length === 0) {
+      toast(
+        "error",
+        "Nothing to save",
+        "Set at least one option, otherwise this configuration is identical to the model's defaults."
+      );
+      return;
+    }
+
+    if (editingId === null) {
+      const stored = addConfiguration(draft);
+      toast("success", "Configuration added", stored.name);
+    } else {
+      const stored = updateConfiguration(editingId, draft);
+      toast("success", "Configuration saved", stored ? stored.name : "");
+    }
+
+    renderSetup();
+    toggleEditor(false);
+  });
+}
+
+function bindConfigList() {
+  // Cards are re-rendered on every change, so the container carries the handler.
+  configListEl.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-config-act]");
+
+    if (!button || isRunning) {
+      return;
+    }
+
+    const id = Number(button.dataset.configId);
+
+    if (button.dataset.configAct === "edit") {
+      openForEdit(id);
+      return;
+    }
+
+    if (button.dataset.configAct === "copy") {
+      const copy = duplicateConfiguration(id);
+      renderSetup();
+
+      if (copy) {
+        toast("success", "Configuration duplicated", copy.name);
+      }
+      return;
+    }
+
+    if (button.dataset.configAct === "remove") {
+      // If the card being removed is the one open in the editor, the editor is
+      // now pointing at nothing, so close it.
+      if (editingId === id) {
+        toggleEditor(false);
+        editingId = null;
+      }
+
+      removeConfiguration(id);
+      renderSetup();
+    }
+  });
+
+  clearBtn.addEventListener("click", () => {
+    if (!window.confirm("Remove every configuration from this comparison?")) {
+      return;
+    }
+
+    clearConfigurations();
+    editingId = null;
+    toggleEditor(false);
+    renderSetup();
+  });
+}
+
+/** Hide the import preview and forget what was parsed. */
+function clearPreview() {
+  pendingImport = null;
+  previewEl.classList.add("is-hidden", "is-bad");
+  previewEl.innerHTML = "";
+}
+
+/**
+ * Show why an import could not be read.
+ *
+ * @param {string} message Server or client message.
+ */
+function showPreviewError(message) {
+  pendingImport = null;
+  previewEl.classList.remove("is-hidden");
+  previewEl.classList.add("is-bad");
+  previewEl.innerHTML = `
+    <div class="bench-preview-head">
+      <span class="bench-preview-title">This file could not be read</span>
+    </div>
+    <div class="bench-preview-error">${escapeHtml(message)}</div>`;
+}
+
+/**
+ * Show what an import was understood to contain, before applying it.
+ *
+ * Applying is a separate step because a file may also carry a model and prompts,
+ * which would otherwise silently overwrite what the user already typed.
+ *
+ * @param {object} document Parsed document from the parse endpoint.
+ */
+function showPreview(document_) {
+  pendingImport = document_;
+
+  const rows = document_.configurations
+    .map(
+      (config) => `
+        <div class="bench-preview-row">
+          <span class="bench-preview-name">${escapeHtml(config.name)}</span>
+          <span class="bench-preview-options">${escapeHtml(
+            Object.entries(config.options)
+              .map(([key, value]) => `${key}=${Array.isArray(value) ? value.join("|") : value}`)
+              .join("  ")
+          )}</span>
+        </div>`
+    )
+    .join("");
+
+  const extras = [];
+
+  if (document_.model) {
+    extras.push(`model "${document_.model}"`);
+  }
+
+  if (document_.prompts.length > 0) {
+    extras.push(`${document_.prompts.length} prompt${document_.prompts.length === 1 ? "" : "s"}`);
+  }
+
+  const note = extras.length
+    ? `<span class="bench-preview-source">also carries ${escapeHtml(extras.join(" and "))}</span>`
+    : "";
+
+  previewEl.classList.remove("is-hidden", "is-bad");
+  previewEl.innerHTML = `
+    <div class="bench-preview-head">
+      <span class="bench-preview-title">
+        ${document_.configurations.length} configuration${document_.configurations.length === 1 ? "" : "s"} found
+      </span>
+      <span class="bench-preview-source">${escapeHtml(document_.source || "")}</span>
+      ${note}
+    </div>
+    <div class="bench-preview-list">${rows}</div>
+    <div class="bench-preview-foot">
+      <button type="button" class="btn btn-sm" data-import-act="replace">Replace existing</button>
+      <button type="button" class="btn btn-sm btn-primary" data-import-act="append">Add to list</button>
+    </div>`;
+}
+
+/**
+ * Validate an uploaded file against the server's schema.
+ *
+ * @param {File} file File chosen or dropped by the user.
+ */
+async function checkFile(file) {
+  if (!file) {
+    return;
+  }
+
+  const form = new FormData();
+  form.append("file", file);
+
+  try {
+    const { data } = await api("/api/benchmark/parse", { method: "POST", body: form });
+    showPreview(data);
+  } catch (error) {
+    showPreviewError(error.message);
+  }
+}
+
+/** Validate whatever is in the paste box. */
+async function checkPastedText() {
+  const text = pasteEl.value.trim();
+
+  if (!text) {
+    showPreviewError("Paste a configuration first.");
+    return;
+  }
+
+  try {
+    const { data } = await postJson("/api/benchmark/parse", { text });
+    showPreview(data);
+  } catch (error) {
+    showPreviewError(error.message);
+  }
+}
+
+/**
+ * Apply a previewed import.
+ *
+ * @param {"append"|"replace"} mode Whether to keep the existing configurations.
+ */
+function applyImport(mode) {
+  if (!pendingImport) {
+    return;
+  }
+
+  if (mode === "replace") {
+    clearConfigurations();
+    editingId = null;
+    toggleEditor(false);
+  }
+
+  const added = addConfigurations(pendingImport.configurations);
+
+  // A file may describe a whole setup, not just configurations. Those fields are
+  // only taken when the user has not already filled them in themselves.
+  if (pendingImport.model && getInstalledModels().includes(pendingImport.model)) {
+    modelEl.value = pendingImport.model;
+  }
+
+  if (pendingImport.prompts.length > 0 && (mode === "replace" || readPrompts().length === 0)) {
+    promptsEl.value = pendingImport.prompts.join("\n\n");
+  }
+
+  if (pendingImport.include_output !== null && pendingImport.include_output !== undefined) {
+    includeOutputEl.checked = pendingImport.include_output;
+  }
+
+  toast(
+    "success",
+    mode === "replace" ? "Configurations replaced" : "Configurations added",
+    `${added} configuration${added === 1 ? "" : "s"} now in the comparison.`
+  );
+
+  renderSetup();
+  toggleImport(false);
+}
+
+function bindImport() {
+  importBtn.addEventListener("click", () => toggleImport(importEl.classList.contains("is-hidden")));
+  document.getElementById("btn-import-close").addEventListener("click", () => toggleImport(false));
+  document.getElementById("btn-paste-check").addEventListener("click", checkPastedText);
+
+  dropzoneEl.addEventListener("click", () => fileEl.click());
+  dropzoneEl.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      fileEl.click();
+    }
+  });
+
+  fileEl.addEventListener("change", () => {
+    checkFile(fileEl.files[0]);
+    // Reset so choosing the same file twice in a row fires change again.
+    fileEl.value = "";
+  });
+
+  ["dragenter", "dragover"].forEach((name) => {
+    dropzoneEl.addEventListener(name, (event) => {
+      event.preventDefault();
+      dropzoneEl.classList.add("is-hover");
+    });
+  });
+
+  ["dragleave", "drop"].forEach((name) => {
+    dropzoneEl.addEventListener(name, (event) => {
+      event.preventDefault();
+      dropzoneEl.classList.remove("is-hover");
+    });
+  });
+
+  dropzoneEl.addEventListener("drop", (event) => {
+    checkFile(event.dataTransfer.files[0]);
+  });
+
+  previewEl.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-import-act]");
+
+    if (button) {
+      applyImport(button.dataset.importAct);
+    }
+  });
+}
+
+/** Download the current setup as a file that can be uploaded again later. */
+async function exportSetup() {
+  const restore = setButtonBusy(exportBtn);
+
+  try {
+    const response = await fetch("/api/benchmark/export", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: modelEl.value,
+        prompts: readPrompts(),
+        include_output: includeOutputEl.checked,
+        configurations: toPayload(),
+      }),
+    });
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      throw new Error(payload.error || `Request failed (${response.status})`);
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = "benchmark-configurations.json";
+    link.click();
+    URL.revokeObjectURL(url);
+
+    toast("success", "Setup exported", "benchmark-configurations.json");
+  } catch (error) {
+    toast("error", "Export failed", error.message);
+  } finally {
+    restore();
+  }
+}
+
+/**
+ * Show or hide the progress bar for a running job.
+ *
+ * The server reports elapsed time but not how far along it is: compare_tests
+ * returns only when every configuration is finished, so there is no per-prompt
+ * progress to report. The bar states what is being done and for how long instead
+ * of implying a percentage it cannot know.
+ *
+ * @param {object|null} job Job snapshot, or null to hide the bar.
+ */
+function renderProgress(job) {
+  if (!job || job.status !== "running") {
+    progressEl.classList.add("is-hidden");
+    progressEl.innerHTML = "";
+    return;
+  }
+
+  progressEl.classList.remove("is-hidden");
+  progressEl.innerHTML = `
+    <span class="spinner"></span>
+    <span class="bench-progress-text">
+      Running ${job.planned_runs} generation${job.planned_runs === 1 ? "" : "s"} across
+      ${job.configurations.length} configuration${job.configurations.length === 1 ? "" : "s"}
+      on ${escapeHtml(job.model)}.
+    </span>
+    <span class="bench-progress-meta">
+      started ${escapeHtml(job.started_at)} · ${Math.round(job.elapsed_seconds)}s elapsed
+    </span>`;
+}
+
+/**
+ * Lock or unlock every control that would change the setup mid-run.
+ *
+ * @param {boolean} running Whether a comparison is in flight.
+ */
+function setRunning(running) {
+  isRunning = running;
+
+  [modelEl, promptsEl, includeOutputEl, addBtn, importBtn].forEach((el) => {
+    el.disabled = running;
+  });
+
+  if (running) {
+    toggleEditor(false);
+    toggleImport(false);
+  }
+
+  renderSetup();
+}
+
+/**
+ * Apply a job snapshot to the page.
+ *
+ * @param {object|null} job Snapshot from the run or status endpoint.
+ */
+function applyJob(job) {
+  if (!job) {
+    setRunning(false);
+    renderProgress(null);
+    metaEl.textContent = "";
+    return;
+  }
+
+  if (job.status === "running") {
+    setRunning(true);
+    renderProgress(job);
+    metaEl.textContent = `Running since ${job.started_at}`;
+    return;
+  }
+
+  setRunning(false);
+  renderProgress(null);
+
+  if (job.status === "failed") {
+    showAlert(errorEl, `The comparison failed — ${job.error}`);
+    resultsEl.innerHTML = `<div class="empty-state">The comparison did not finish.</div>`;
+    metaEl.textContent = `Failed at ${job.finished_at || ""}`;
+    return;
+  }
+
+  hideAlert(errorEl);
+  renderResults(resultsEl, job);
+  metaEl.textContent = `Finished ${job.finished_at || ""}`;
+
+  const discard = document.getElementById("btn-bench-discard");
+
+  if (discard) {
+    discard.addEventListener("click", async () => {
+      try {
+        await postJson("/api/benchmark/clear", {});
+      } catch (error) {
+        toast("error", "Could not discard", error.message);
+        return;
+      }
+
+      resultsEl.innerHTML = `<div class="empty-state">No comparison has been run yet.</div>`;
+      metaEl.textContent = "";
+    });
+  }
+}
+
+/** Poll the job endpoint until the run settles. */
+function startPolling() {
+  window.clearInterval(pollTimer);
+
+  pollTimer = window.setInterval(async () => {
+    let job;
+
+    try {
+      job = (await api("/api/benchmark/status")).data;
+    } catch (error) {
+      // A failed poll says nothing about the run itself, so keep polling and let
+      // the alert explain the gap.
+      showAlert(errorEl, `Lost track of the comparison — ${error.message}`);
+      return;
+    }
+
+    hideAlert(errorEl);
+    applyJob(job);
+
+    if (!job || job.status !== "running") {
+      window.clearInterval(pollTimer);
+      pollTimer = null;
+
+      if (job && job.status === "done") {
+        toast("success", "Comparison finished", `${job.result.tests.length} configurations compared.`);
+      } else if (job && job.status === "failed") {
+        toast("error", "Comparison failed", job.error);
+      }
+    }
+  }, POLL_INTERVAL_MS);
+}
+
+function bindRun() {
+  runBtn.addEventListener("click", async () => {
+    const prompts = readPrompts();
+    const restore = setButtonBusy(runBtn);
+
+    try {
+      const { data } = await postJson("/api/benchmark/run", {
+        model: modelEl.value,
+        prompts,
+        include_output: includeOutputEl.checked,
+        configurations: toPayload(),
+      });
+
+      hideAlert(errorEl);
+      resultsEl.innerHTML = `<div class="empty-state">The comparison is running…</div>`;
+      applyJob(data);
+      startPolling();
+
+      toast(
+        "pending",
+        "Comparison started",
+        `${data.planned_runs} generations queued. This page keeps working while it runs.`
+      ).dismiss();
+    } catch (error) {
+      showAlert(errorEl, `Could not start the comparison — ${error.message}`);
+      toast("error", "Could not start", error.message);
+    } finally {
+      restore();
+      updateRunState();
+    }
+  });
+}
+
+/**
+ * Refresh the parts of the tab that depend on other tabs' data.
+ *
+ * The model dropdown is filled by the Models panel and the server status card
+ * comes from the Ollama panel, so this is called after either of those loads.
+ * Repopulating the dropdown re-enables it, which would unlock the setup while a
+ * comparison is still running, so the lock is reapplied here.
+ */
+export function refreshBenchmarkPanel() {
+  setRunning(isRunning);
+}
+
+/** Bind the Benchmark tab and pick up any run already in flight. */
+export async function initBenchmarkPanel() {
+  bindEditor();
+  bindConfigList();
+  bindImport();
+  bindRun();
+
+  promptsEl.addEventListener("input", () => {
+    renderCards();
+    updateRunState();
+  });
+
+  modelEl.addEventListener("change", updateRunState);
+  exportBtn.addEventListener("click", exportSetup);
+
+  renderSetup();
+
+  try {
+    const { data } = await api("/api/benchmark/schema");
+    buildEditor(data.options);
+  } catch (error) {
+    showAlert(errorEl, `Could not load the configuration options — ${error.message}`);
+  }
+
+  // A reload during a run must not lose it: the job lives on the server, so pick
+  // whatever is there back up.
+  try {
+    const { data } = await api("/api/benchmark/status");
+    applyJob(data);
+
+    if (data && data.status === "running") {
+      startPolling();
+    }
+  } catch (error) {
+    showAlert(errorEl, `Could not read the comparison status — ${error.message}`);
+  }
+}
