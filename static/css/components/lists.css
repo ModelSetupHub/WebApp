@@ -1,0 +1,73 @@
+/* ---------- Model list ---------- */
+
+.model-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 10px;
+}
+
+.model-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  min-width: 0;
+}
+
+.model-name {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.model-size {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-faint);
+  flex-shrink: 0;
+}
+
+.chip {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  flex-shrink: 0;
+}
+
+.chip-ready { background: var(--accent-green-dim); color: var(--accent-green); }
+.chip-loading { background: var(--accent-amber-dim); color: var(--accent-amber); }
+.chip-neutral { background: var(--panel-raised); color: var(--text-dim); }
+.chip-info { background: var(--accent-blue-dim); color: var(--accent-blue); }
+.chip-error { background: var(--accent-red-dim); color: var(--accent-red); }
+
+.empty-state {
+  background: var(--panel);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  color: var(--text-faint);
+  font-size: 12.5px;
+  padding: 18px;
+  text-align: center;
+}
+
+.hint {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+  margin: -6px 0 12px 23px;
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.94em;
+  color: var(--text-dim);
+}
+

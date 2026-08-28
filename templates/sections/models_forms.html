@@ -1,0 +1,107 @@
+{# Action forms for the Models tab: run, load, add, configure. #}
+<form class="panel-form" id="form-run" novalidate>
+  <h3 class="form-title">Run a prompt</h3>
+  <p class="hint">run_model</p>
+
+  <label class="field">
+    <span class="field-label">Model</span>
+    <select class="input" name="model" data-model-select required></select>
+  </label>
+
+  <label class="field">
+    <span class="field-label">Prompt</span>
+    <textarea class="input" name="prompt" rows="4" placeholder="Explain what a GGUF file is."></textarea>
+  </label>
+
+  <div class="form-foot">
+    <button type="submit" class="btn btn-primary">Run</button>
+  </div>
+</form>
+
+<form class="panel-form" id="form-load" novalidate>
+  <h3 class="form-title">Load into memory</h3>
+  <p class="hint">load_model</p>
+
+  <label class="field">
+    <span class="field-label">Model</span>
+    <select class="input" name="model" data-model-select required></select>
+  </label>
+
+  <label class="field">
+    <span class="field-label">Keep alive</span>
+    <input class="input" name="keep_alive" value="10m" placeholder="10m">
+    <span class="field-hint">How long to hold the model in memory, e.g. 10m or 1h.</span>
+  </label>
+
+  <div class="form-foot">
+    <button type="submit" class="btn btn-primary">Load</button>
+  </div>
+</form>
+
+<form class="panel-form" id="form-add" novalidate>
+  <h3 class="form-title">Add a local model file</h3>
+  <p class="hint">add_model</p>
+
+  <label class="field">
+    <span class="field-label">New model name</span>
+    <input class="input" name="model_name" placeholder="my-model">
+  </label>
+
+  <label class="field">
+    <span class="field-label">Model file path</span>
+    <input class="input" name="model_path" placeholder="D:\models\model.gguf">
+    <span class="field-hint">Absolute path to a GGUF file on this machine.</span>
+  </label>
+
+  <div class="form-foot">
+    <button type="submit" class="btn btn-primary">Add</button>
+  </div>
+</form>
+
+<form class="panel-form" id="form-configure" novalidate>
+  <h3 class="form-title">Create a configured copy</h3>
+  <p class="hint">configure_model</p>
+
+  <label class="field">
+    <span class="field-label">Source model</span>
+    <select class="input" name="source_model" data-model-select required></select>
+  </label>
+
+  <label class="field">
+    <span class="field-label">New model name</span>
+    <input class="input" name="target_model" placeholder="my-model-8k">
+  </label>
+
+  <div class="param-grid">
+    <label class="field">
+      <span class="field-label">num_ctx</span>
+      <input class="input" name="num_ctx" type="number" min="1" placeholder="8192">
+    </label>
+    <label class="field">
+      <span class="field-label">temperature</span>
+      <input class="input" name="temperature" type="number" step="0.05" min="0" placeholder="0.7">
+    </label>
+    <label class="field">
+      <span class="field-label">top_p</span>
+      <input class="input" name="top_p" type="number" step="0.05" min="0" max="1" placeholder="0.9">
+    </label>
+    <label class="field">
+      <span class="field-label">top_k</span>
+      <input class="input" name="top_k" type="number" min="1" placeholder="40">
+    </label>
+    <label class="field">
+      <span class="field-label">repeat_penalty</span>
+      <input class="input" name="repeat_penalty" type="number" step="0.05" min="0" placeholder="1.1">
+    </label>
+    <label class="field">
+      <span class="field-label">num_predict</span>
+      <input class="input" name="num_predict" type="number" placeholder="256">
+    </label>
+  </div>
+
+  <span class="field-hint">Blank parameters are omitted. The source model is left untouched.</span>
+
+  <div class="form-foot">
+    <button type="submit" class="btn btn-primary">Create</button>
+  </div>
+</form>

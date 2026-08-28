@@ -1,0 +1,177 @@
+/* ---------- Subsections ---------- */
+
+.subsection { margin-top: 30px; }
+.subsection.is-flush { margin-top: 22px; }
+
+.subsection-title {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+/* A short accent rule leads each subsection title so the page has clear
+   horizontal anchors down the left edge. */
+.subsection-title::before {
+  content: "";
+  width: 14px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent-green);
+  flex-shrink: 0;
+}
+
+/* Two-up on wide screens so the right half is not dead space, while staying
+   wide enough for the tile lists inside a group to pair up. */
+.group-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 480px), 1fr));
+  gap: 14px 18px;
+  align-items: stretch;
+}
+
+/* Hardware groups get a full-width row each, so a tall group never drags one
+   column far below its neighbour. */
+.group-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.spec-group { min-width: 0; }
+
+.spec-group-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+/* ---------- Spec tables ---------- */
+
+.spec-table {
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  padding: 4px 16px;
+}
+
+/* A full-width table would otherwise be a stack of very long, mostly empty
+   rows, so split the pairs across columns and let them wrap. The column count
+   varies with width, which makes per-row dividers land unevenly at the foot of
+   each column, so spacing carries the rhythm here instead. */
+.spec-table.is-split {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  column-gap: 32px;
+  padding: 8px 16px;
+}
+
+.spec-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.spec-row:last-child { border-bottom: none; }
+
+.spec-table.is-split .spec-row {
+  border-bottom: none;
+  padding: 6px 0;
+}
+
+.spec-key {
+  font-size: 12.5px;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.spec-val {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--text);
+  text-align: right;
+  word-break: break-word;
+}
+
+.spec-val.is-unknown { color: var(--text-faint); }
+
+/* ---------- Tiles ---------- */
+
+/* Tiles stretch to fill their row; their inner spec pairs re-flow into more
+   columns as the tile widens, so a lone module or GPU stays short and wide
+   instead of becoming a tall column with dead space beside it. */
+.tile-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr));
+  gap: 12px;
+  margin-top: 12px;
+  align-items: start;
+}
+
+.tile {
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  min-width: 0;
+}
+
+.tile .spec-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+  column-gap: 28px;
+}
+
+.tile .spec-row {
+  border-bottom: none;
+  padding: 6px 0;
+}
+
+.tile-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 9px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.tile-name {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- Usage bar ---------- */
+
+.bar {
+  height: 5px;
+  background: var(--panel-raised);
+  border-radius: 20px;
+  overflow: hidden;
+  margin: 9px 0;
+}
+
+.bar-fill {
+  height: 100%;
+  background: var(--accent-green);
+  border-radius: 20px;
+  transition: width 0.25s ease;
+}
+
+.bar-fill.is-mid { background: var(--accent-amber); }
+.bar-fill.is-high { background: var(--accent-red); }
+

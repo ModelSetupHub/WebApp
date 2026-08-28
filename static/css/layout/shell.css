@@ -1,0 +1,25 @@
+/* ---------- Shell ---------- */
+
+.app-shell {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+/* ---------- Main ---------- */
+
+.main {
+  min-width: 0;
+  padding: 28px clamp(18px, 3vw, 44px) 56px;
+}
+
+.main-inner {
+  max-width: var(--content-max);
+  margin: 0 auto;
+}
+
+.main h1 {
+  font-size: 19px;
+  font-weight: 600;
+}
+

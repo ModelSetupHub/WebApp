@@ -1,0 +1,130 @@
+/* ---------- Alert ---------- */
+
+.alert {
+  background: var(--accent-red-dim);
+  border: 1px solid var(--accent-red);
+  border-radius: var(--radius-sm);
+  color: var(--accent-red);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 11px 14px;
+  margin-bottom: 16px;
+}
+
+.is-hidden { display: none; }
+
+/* ---------- Toasts ---------- */
+
+.toast-stack {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  width: min(380px, calc(100vw - 36px));
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--panel-raised);
+  border: 1px solid var(--border-strong);
+  border-left: 3px solid var(--text-faint);
+  border-radius: var(--radius-sm);
+  padding: 11px 13px;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.42);
+  animation: toast-in 0.18s ease;
+  pointer-events: auto;
+}
+
+.toast.is-leaving { animation: toast-out 0.16s ease forwards; }
+
+.toast.is-pending { border-left-color: var(--accent-blue); }
+.toast.is-success { border-left-color: var(--accent-green); }
+.toast.is-error { border-left-color: var(--accent-red); }
+
+.toast-icon {
+  font-size: 12px;
+  line-height: 1.5;
+  flex-shrink: 0;
+}
+
+.toast.is-pending .toast-icon { color: var(--accent-blue); }
+.toast.is-success .toast-icon { color: var(--accent-green); }
+.toast.is-error .toast-icon { color: var(--accent-red); }
+
+.toast-text { min-width: 0; }
+
+.toast-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.toast-body {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 3px;
+  line-height: 1.5;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes toast-out {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(6px); }
+}
+
+/* A spinner used both in toasts and inside busy buttons. */
+.spinner {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border: 1.5px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.65s linear infinite;
+  vertical-align: -1px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---------- Skeleton ---------- */
+
+.skeleton {
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  height: 92px;
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, var(--panel-raised), transparent);
+  animation: shimmer 1.1s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+

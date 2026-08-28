@@ -1,0 +1,28 @@
+{# Left navigation and host status footer. #}
+<aside class="sidebar">
+  <div class="brand">
+    <span class="brand-mark">◆</span>
+    <span class="brand-name">Model Setup Hub</span>
+  </div>
+
+  <nav class="nav" aria-label="Sections">
+    <span class="nav-caption">Tools</span>
+    <a href="#system" class="nav-item is-active" data-section="system">
+      <span class="nav-glyph">▤</span> System
+    </a>
+    <a href="#ollama" class="nav-item" data-section="ollama">
+      <span class="nav-glyph">◈</span> Ollama
+    </a>
+    <a href="#models" class="nav-item" data-section="models">
+      <span class="nav-glyph">◇</span> Models
+    </a>
+    <a href="#benchmark" class="nav-item" data-section="benchmark">
+      <span class="nav-glyph">◎</span> Benchmark
+    </a>
+  </nav>
+
+  <div class="sidebar-foot">
+    <span class="status-dot" id="host-dot"></span>
+    <span class="host-label" id="host-label">connecting…</span>
+  </div>
+</aside>
