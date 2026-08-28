@@ -1,0 +1,53 @@
+/* ---------- Console ---------- */
+
+.console {
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  max-height: 460px;
+  overflow-y: auto;
+}
+
+.console .empty-state {
+  background: none;
+  border: none;
+  padding: 6px;
+}
+
+.console-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.console-call {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.console-time {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-faint);
+  margin-left: auto;
+}
+
+.console-body {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-dim);
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+}
+
+.console-body.is-error { color: var(--accent-red); }
+
+.console-body.is-success { color: var(--accent-green); }
+

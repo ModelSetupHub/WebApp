@@ -1,0 +1,36 @@
+/* ---------- Control bar ---------- */
+
+.control-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  padding: 15px 18px;
+}
+
+.control-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.control-title {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.control-title.is-good { color: var(--accent-green); }
+.control-title.is-bad { color: var(--accent-red); }
+
+.control-note {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+

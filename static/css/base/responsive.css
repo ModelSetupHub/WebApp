@@ -1,0 +1,46 @@
+/* ---------- Responsive ---------- */
+
+@media (max-width: 900px) {
+  :root { --sidebar-w: 178px; }
+  .group-grid { grid-template-columns: minmax(0, 1fr); }
+  .spec-table.is-split { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 680px) {
+  .app-shell { grid-template-columns: minmax(0, 1fr); }
+  .sidebar {
+    position: static;
+    height: auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 14px;
+    border-right: none;
+    border-bottom: 1px solid var(--border-soft);
+    overflow-x: auto;
+  }
+  .nav { flex-direction: row; }
+  .nav-caption { display: none; }
+  .sidebar-foot {
+    margin-top: 0;
+    margin-left: auto;
+    border-top: none;
+    padding: 0 4px;
+  }
+  .main { padding: 20px 16px 40px; }
+  .section-head { gap: 12px; }
+  .section-actions { width: 100%; justify-content: space-between; }
+  .spec-row { flex-direction: column; gap: 2px; }
+  .spec-val { text-align: left; }
+}
+
+/* ---------- Accessibility ---------- */
+
+:focus-visible {
+  outline: 2px solid var(--accent-green);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}

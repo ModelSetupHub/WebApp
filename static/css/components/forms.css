@@ -1,0 +1,93 @@
+/* ---------- Forms ---------- */
+
+.panel-form {
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  padding: 16px 18px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.form-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.panel-form .hint { margin: -10px 0 0; }
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.field-label {
+  font-size: 11.5px;
+  color: var(--text-dim);
+}
+
+.field-hint {
+  font-size: 11px;
+  color: var(--text-faint);
+  line-height: 1.4;
+}
+
+.input {
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  padding: 8px 10px;
+  width: 100%;
+  transition: border-color 0.12s ease;
+}
+
+.input:hover:not(:disabled) { border-color: #3A4147; }
+
+.input:focus {
+  border-color: var(--accent-green);
+  outline: none;
+}
+
+.input:disabled {
+  color: var(--text-faint);
+  cursor: not-allowed;
+}
+
+textarea.input {
+  resize: vertical;
+  min-height: 74px;
+  line-height: 1.5;
+}
+
+select.input {
+  appearance: none;
+  cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-faint) 50%),
+                    linear-gradient(135deg, var(--text-faint) 50%, transparent 50%);
+  background-position: calc(100% - 16px) 52%, calc(100% - 11px) 52%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 30px;
+}
+
+.param-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 120px), 1fr));
+  gap: 10px;
+}
+
+.form-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 2px;
+}
+
