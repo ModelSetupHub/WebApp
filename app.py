@@ -14,8 +14,10 @@ browser can render is this layer's job, so the submodule stays untouched.
 """
 
 from datetime import datetime
+import json
 import re
 import threading
+import urllib.error
 
 from flask import Flask, jsonify, render_template, request
 
@@ -229,6 +231,34 @@ def parse_model_info(text: str) -> dict:
     return {"sections": sections, "raw": text or ""}
 
 
+def describe_error(error: Exception) -> str:
+    """Build the most specific message available for a core exception.
+
+    ``core.ollama.model.load_model`` re-raises HTTP failures as a generic
+    RuntimeError, so the Ollama API's own explanation only survives on the
+    chained cause. Read it back when it is there.
+
+    Args:
+        error: Exception raised by a core call.
+
+    Returns:
+        str: Error text, including the upstream Ollama message when available.
+    """
+    message = f"{type(error).__name__}: {error}"
+    cause = error.__cause__
+
+    if isinstance(cause, urllib.error.HTTPError):
+        try:
+            detail = json.loads(cause.read().decode("utf-8")).get("error")
+        except Exception:
+            detail = None
+
+        if detail:
+            return f"{message} — {detail}"
+
+    return message
+
+
 # ---------------------------------------------------------------------------
 # Ollama runtime
 # ---------------------------------------------------------------------------
@@ -236,6 +266,69 @@ def parse_model_info(text: str) -> dict:
 @app.route("/api/ollama/status")
 def api_ollama_status():
     return call_core(ollama_runtime.get_status)
+
+
+@app.route("/api/ollama/start", methods=["POST"])
+def api_ollama_start():
+    payload = body()
+    timeout = payload.get("timeout", ollama_runtime.START_TIMEOUT)
+
+    try:
+        timeout = float(timeout)
+    except (TypeError, ValueError):
+        return fail("Timeout must be a number", 400)
+
+    try:
+        ollama_runtime.start(timeout)
+    except RuntimeError as error:
+        return fail(str(error), 502)
+    except Exception as error:
+        return fail(f"{type(error).__name__}: {error}")
+
+    # Report the state the caller should now render, not just a success flag.
+    return ok(ollama_runtime.get_status())
+
+
+@app.route("/api/ollama/stop", methods=["POST"])
+def api_ollama_stop():
+    payload = body()
+    timeout = payload.get("timeout", ollama_runtime.STOP_TIMEOUT)
+
+    try:
+        timeout = float(timeout)
+    except (TypeError, ValueError):
+        return fail("Timeout must be a number", 400)
+
+    try:
+        ollama_runtime.stop(timeout)
+    except RuntimeError as error:
+        return fail(str(error), 502)
+    except Exception as error:
+        return fail(f"{type(error).__name__}: {error}")
+
+    status = ollama_runtime.get_status()
+
+    # core stops the server process, but the Ollama desktop/tray app supervises
+    # it and starts a fresh one immediately. Report that instead of claiming a
+    # stop that did not stick.
+    return ok(status, restarted=status["running"])
+
+
+@app.route("/api/ollama/install", methods=["POST"])
+def api_ollama_install():
+    installer = (body().get("installer_path") or "").strip()
+
+    if not installer:
+        return fail("A path to the Ollama installer is required", 400)
+
+    try:
+        ollama_runtime.install(installer)
+    except FileNotFoundError as error:
+        return fail(str(error), 400)
+    except Exception as error:
+        return fail(f"{type(error).__name__}: {error}")
+
+    return ok(ollama_runtime.get_status())
 
 
 # ---------------------------------------------------------------------------
@@ -334,7 +427,7 @@ def api_model_load():
     except (ValueError, TypeError) as error:
         return fail(f"{type(error).__name__}: {error}", 400)
     except Exception as error:
-        return fail(f"{type(error).__name__}: {error}")
+        return fail(describe_error(error))
 
     # core returns None when the model was already resident in memory.
     if result is None:
