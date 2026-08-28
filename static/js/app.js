@@ -87,6 +87,78 @@ function postJson(path, payload) {
 }
 
 // ---------------------------------------------------------------------------
+// Toasts and busy buttons
+// ---------------------------------------------------------------------------
+
+const toastStack = document.getElementById("toast-stack");
+
+const TOAST_ICON = {
+  pending: '<span class="spinner"></span>',
+  success: "✓",
+  error: "✕",
+};
+
+/** Show a toast. Returns a handle so a pending toast can be settled later. */
+function toast(state, title, body = "", { timeout = 4500 } = {}) {
+  const el = document.createElement("div");
+  el.className = `toast is-${state}`;
+  el.innerHTML = `
+    <span class="toast-icon">${TOAST_ICON[state] || ""}</span>
+    <span class="toast-text">
+      <span class="toast-title"></span>
+      ${body ? '<span class="toast-body"></span>' : ""}
+    </span>`;
+
+  el.querySelector(".toast-title").textContent = title;
+
+  if (body) {
+    el.querySelector(".toast-body").textContent = body;
+  }
+
+  toastStack.appendChild(el);
+
+  const dismiss = () => {
+    if (!el.isConnected) {
+      return;
+    }
+    el.classList.add("is-leaving");
+    el.addEventListener("animationend", () => el.remove(), { once: true });
+  };
+
+  // A pending toast has no timeout; it stays until its action settles.
+  const timer = state === "pending" ? null : window.setTimeout(dismiss, timeout);
+
+  el.addEventListener("click", dismiss);
+
+  return {
+    settle(nextState, nextTitle, nextBody) {
+      window.clearTimeout(timer);
+      dismiss();
+      return toast(nextState, nextTitle, nextBody);
+    },
+    dismiss,
+  };
+}
+
+/** Put a button into a busy state; returns a function that restores it. */
+function setButtonBusy(button) {
+  if (!button) {
+    return () => {};
+  }
+
+  const label = button.innerHTML;
+  button.disabled = true;
+  button.classList.add("is-busy");
+  button.innerHTML = `<span class="spinner"></span>${label}`;
+
+  return () => {
+    button.disabled = false;
+    button.classList.remove("is-busy");
+    button.innerHTML = label;
+  };
+}
+
+// ---------------------------------------------------------------------------
 // System
 // ---------------------------------------------------------------------------
 
@@ -307,7 +379,7 @@ function renderStorage(profile) {
 }
 
 async function loadSystem({ refresh = false } = {}) {
-  rescanBtn.disabled = true;
+  const restore = setButtonBusy(rescanBtn);
   scanMetaEl.textContent = refresh ? "Rescanning…" : "Scanning…";
   document.getElementById("system-cards").innerHTML = skeletons(4);
 
@@ -333,11 +405,16 @@ async function loadSystem({ refresh = false } = {}) {
 
     scanMetaEl.textContent = `Scanned ${data.scanned_at}${data.cached ? " (cached)" : ""}`;
     setHostStatus("online", (profile.system || {}).name || "host online");
+
+    if (refresh) {
+      toast("success", "System rescanned", "Hardware profile refreshed.");
+    }
   } catch (error) {
     scanMetaEl.textContent = "";
     showSystemError(error.message);
+    toast("error", "System scan failed", error.message);
   } finally {
-    rescanBtn.disabled = false;
+    restore();
   }
 }
 
@@ -354,13 +431,14 @@ const refreshStatusBtn = document.getElementById("btn-refresh-status");
 // "Ollama is not running", which produce the same empty table.
 let ollamaStatus = null;
 
-function statusChip(state, label) {
-  const cls = state === true ? "chip-ready" : state === false ? "chip-loading" : "chip-neutral";
-  return `<span class="chip ${cls}">${escapeHtml(label)}</span>`;
+/** Colour a card value by boolean health so state reads at a glance. */
+function stateValue(isGood, label) {
+  const tone = isGood ? "is-good" : "is-bad";
+  return `<div class="card-value ${tone}">${escapeHtml(label)}</div>`;
 }
 
 async function loadOllamaStatus() {
-  refreshStatusBtn.disabled = true;
+  const restore = setButtonBusy(refreshStatusBtn);
   document.getElementById("ollama-cards").innerHTML = skeletons(3);
 
   try {
@@ -371,17 +449,18 @@ async function loadOllamaStatus() {
     document.getElementById("ollama-cards").innerHTML = `
       <div class="card">
         <div class="card-label">Installed</div>
-        <div class="card-value">${data.installed ? "yes" : "no"}</div>
+        ${stateValue(data.installed, data.installed ? "yes" : "no")}
         <div class="card-sub">${data.installed ? "binary found on PATH" : "ollama binary not found"}</div>
       </div>
       <div class="card">
         <div class="card-label">Server</div>
-        <div class="card-value">${data.running ? "running" : "stopped"}</div>
+        ${stateValue(data.running, data.running ? "running" : "stopped")}
         <div class="card-sub">local API on port 11434</div>
       </div>
       <div class="card">
         <div class="card-label">Version</div>
         <div class="card-value">${escapeHtml(fmt(data.version))}</div>
+        <div class="card-sub">reported by the ollama binary</div>
       </div>
     `;
 
@@ -396,7 +475,7 @@ async function loadOllamaStatus() {
     document.getElementById("ollama-cards").innerHTML = "";
     document.getElementById("ollama-specs").innerHTML = "";
   } finally {
-    refreshStatusBtn.disabled = false;
+    restore();
   }
 }
 
@@ -415,10 +494,10 @@ function writeConsole(call, text, { isError = false } = {}) {
   consoleEl.innerHTML = `
     <div class="console-head">
       <span class="console-call">${escapeHtml(call)}</span>
-      ${statusChip(!isError, isError ? "failed" : "ok")}
+      <span class="chip ${isError ? "chip-error" : "chip-ready"}">${isError ? "failed" : "done"}</span>
       <span class="console-time">${escapeHtml(time)}</span>
     </div>
-    <pre class="console-body${isError ? " is-error" : ""}">${escapeHtml(body)}</pre>
+    <pre class="console-body${isError ? " is-error" : " is-success"}">${escapeHtml(body)}</pre>
   `;
   consoleEl.scrollTop = 0;
 }
@@ -427,19 +506,33 @@ function writeConsolePending(call) {
   consoleEl.innerHTML = `
     <div class="console-head">
       <span class="console-call">${escapeHtml(call)}</span>
-      ${statusChip(null, "running…")}
+      <span class="chip chip-info"><span class="spinner"></span> running</span>
     </div>
     <div class="skeleton" style="height:58px"></div>
   `;
 }
 
-/** Run one core call, reporting its outcome in the output panel. */
-async function runAction(call, work, { onSuccess, refresh = true } = {}) {
+/**
+ * Run one core call, reporting progress in the output panel, a toast, and the
+ * originating button.
+ *
+ * @param {string} call Signature shown in the output panel.
+ * @param {string} label Short human-readable action name for the toast.
+ * @param {Function} work Async function performing the request.
+ * @param {object} options onSuccess formats the output; refresh reloads the
+ *     model tables; button is put into a busy state for the duration.
+ */
+async function runAction(call, label, work, { onSuccess, refresh = true, button } = {}) {
   writeConsolePending(call);
+  const restoreButton = setButtonBusy(button);
+  const pending = toast("pending", `${label}…`, "Working, this can take a moment.");
 
   try {
     const result = await work();
-    writeConsole(call, onSuccess ? onSuccess(result) : result.data);
+    const message = onSuccess ? onSuccess(result) : result.data;
+
+    writeConsole(call, message);
+    pending.settle("success", `${label} — done`, String(message ?? "").trim().slice(0, 200));
 
     if (refresh) {
       await loadModels({ quiet: true });
@@ -448,7 +541,10 @@ async function runAction(call, work, { onSuccess, refresh = true } = {}) {
     return true;
   } catch (error) {
     writeConsole(call, error.message, { isError: true });
+    pending.settle("error", `${label} — failed`, error.message);
     return false;
+  } finally {
+    restoreButton();
   }
 }
 
@@ -582,6 +678,8 @@ function syncModelSelects() {
 }
 
 function renderModelsCards(installed, running) {
+  const serverUp = ollamaStatus ? ollamaStatus.running : null;
+
   document.getElementById("models-cards").innerHTML = `
     <div class="card">
       <div class="card-label">Installed</div>
@@ -590,19 +688,21 @@ function renderModelsCards(installed, running) {
     </div>
     <div class="card">
       <div class="card-label">Loaded</div>
-      <div class="card-value">${running}</div>
+      <div class="card-value ${running > 0 ? "is-good" : ""}">${running}</div>
       <div class="card-sub">models resident in memory</div>
     </div>
     <div class="card">
       <div class="card-label">Server</div>
-      <div class="card-value">${ollamaStatus ? (ollamaStatus.running ? "running" : "stopped") : "—"}</div>
+      ${serverUp === null
+        ? '<div class="card-value is-unknown">—</div>'
+        : stateValue(serverUp, serverUp ? "running" : "stopped")}
       <div class="card-sub">${ollamaStatus ? escapeHtml(fmt(ollamaStatus.version, " · ollama")) : "status unknown"}</div>
     </div>
   `;
 }
 
 async function loadModels({ quiet = false } = {}) {
-  refreshModelsBtn.disabled = true;
+  const restore = setButtonBusy(quiet ? null : refreshModelsBtn);
 
   if (!quiet) {
     modelsMetaEl.textContent = "Loading…";
@@ -632,7 +732,7 @@ async function loadModels({ quiet = false } = {}) {
     showAlert(modelsErrorEl, `Could not list models — ${error.message}`);
     modelsMetaEl.textContent = "";
   } finally {
-    refreshModelsBtn.disabled = false;
+    restore();
   }
 }
 
@@ -658,20 +758,23 @@ function formatModelInfo(data) {
     .join("\n\n");
 }
 
-function rowAction(act, model) {
+function rowAction(act, model, button) {
   if (act === "info") {
     return runAction(
       `show_model_info("${model}")`,
+      `Reading ${model}`,
       () => api(`/api/ollama/models/info?model=${encodeURIComponent(model)}`),
-      { onSuccess: (res) => formatModelInfo(res.data), refresh: false }
+      { onSuccess: (res) => formatModelInfo(res.data), refresh: false, button }
     );
   }
 
   if (act === "load") {
     return runAction(
       `load_model("${model}")`,
+      `Loading ${model}`,
       () => postJson("/api/ollama/models/load", { model, keep_alive: "10m" }),
       {
+        button,
         onSuccess: (res) =>
           res.already_loaded
             ? `Model "${model}" is already loaded.`
@@ -683,8 +786,9 @@ function rowAction(act, model) {
   if (act === "stop") {
     return runAction(
       `stop_model("${model}")`,
+      `Stopping ${model}`,
       () => postJson("/api/ollama/models/stop", { model }),
-      { onSuccess: (res) => res.data || `Model "${model}" stopped.` }
+      { button, onSuccess: (res) => res.data || `Model "${model}" stopped.` }
     );
   }
 
@@ -696,8 +800,9 @@ function rowAction(act, model) {
 
     return runAction(
       `remove_model("${model}")`,
+      `Removing ${model}`,
       () => postJson("/api/ollama/models/remove", { model }),
-      { onSuccess: (res) => res.data || `Model "${model}" removed.` }
+      { button, onSuccess: (res) => res.data || `Model "${model}" removed.` }
     );
   }
 
@@ -714,7 +819,7 @@ function rowAction(act, model) {
       return;
     }
 
-    rowAction(button.dataset.act, button.dataset.model);
+    rowAction(button.dataset.act, button.dataset.model, button);
   });
 });
 
@@ -723,21 +828,23 @@ document.getElementById("form-run").addEventListener("submit", (event) => {
   const form = event.currentTarget;
   const model = form.model.value;
   const prompt = form.prompt.value;
+  const button = form.querySelector('button[type="submit"]');
 
   if (!model) {
-    writeConsole("run_model", "Select a model first.", { isError: true });
+    toast("error", "Cannot run", "Select a model first.");
     return;
   }
 
   if (!prompt.trim()) {
-    writeConsole("run_model", "Enter a prompt first.", { isError: true });
+    toast("error", "Cannot run", "Enter a prompt first.");
     return;
   }
 
   runAction(
     `run_model("${model}")`,
+    `Running ${model}`,
     () => postJson("/api/ollama/models/run", { model, prompt }),
-    { refresh: false }
+    { refresh: false, button }
   );
 });
 
@@ -746,16 +853,19 @@ document.getElementById("form-load").addEventListener("submit", (event) => {
   const form = event.currentTarget;
   const model = form.model.value;
   const keepAlive = form.keep_alive.value.trim() || "10m";
+  const button = form.querySelector('button[type="submit"]');
 
   if (!model) {
-    writeConsole("load_model", "Select a model first.", { isError: true });
+    toast("error", "Cannot load", "Select a model first.");
     return;
   }
 
   runAction(
     `load_model("${model}", keep_alive="${keepAlive}")`,
+    `Loading ${model}`,
     () => postJson("/api/ollama/models/load", { model, keep_alive: keepAlive }),
     {
+      button,
       onSuccess: (res) =>
         res.already_loaded
           ? `Model "${model}" is already loaded.`
@@ -769,16 +879,18 @@ document.getElementById("form-add").addEventListener("submit", (event) => {
   const form = event.currentTarget;
   const name = form.model_name.value.trim();
   const path = form.model_path.value.trim();
+  const button = form.querySelector('button[type="submit"]');
 
   if (!name || !path) {
-    writeConsole("add_model", "Both a model name and a file path are required.", { isError: true });
+    toast("error", "Cannot add", "Both a model name and a file path are required.");
     return;
   }
 
   runAction(
     `add_model("${name}")`,
+    `Adding ${name}`,
     () => postJson("/api/ollama/models/add", { model_name: name, model_path: path }),
-    { onSuccess: (res) => res.data || `Model "${name}" created.` }
+    { button, onSuccess: (res) => res.data || `Model "${name}" created.` }
   );
 });
 
@@ -796,6 +908,7 @@ document.getElementById("form-configure").addEventListener("submit", (event) => 
   const form = event.currentTarget;
   const source = form.source_model.value;
   const target = form.target_model.value.trim();
+  const button = form.querySelector('button[type="submit"]');
 
   const parameters = {};
   CONFIG_PARAMS.forEach((key) => {
@@ -806,24 +919,25 @@ document.getElementById("form-configure").addEventListener("submit", (event) => 
   });
 
   if (!source || !target) {
-    writeConsole("configure_model", "A source model and a new model name are required.", { isError: true });
+    toast("error", "Cannot create", "A source model and a new model name are required.");
     return;
   }
 
   if (Object.keys(parameters).length === 0) {
-    writeConsole("configure_model", "Set at least one parameter.", { isError: true });
+    toast("error", "Cannot create", "Set at least one parameter.");
     return;
   }
 
   runAction(
     `configure_model("${source}" -> "${target}")`,
+    `Creating ${target}`,
     () =>
       postJson("/api/ollama/models/configure", {
         source_model: source,
         target_model: target,
         parameters,
       }),
-    { onSuccess: (res) => res.data || `Model "${target}" created from "${source}".` }
+    { button, onSuccess: (res) => res.data || `Model "${target}" created from "${source}".` }
   );
 });
 

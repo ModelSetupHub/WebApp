@@ -151,15 +151,15 @@
           <div class="card-grid" id="models-cards"></div>
 
           <div class="subsection">
-            <h2 class="subsection-title">Installed models</h2>
-            <p class="hint">list_models · show_model_info · load_model · stop_model · remove_model</p>
-            <div id="models-table"></div>
-          </div>
-
-          <div class="subsection">
             <h2 class="subsection-title">Running models</h2>
             <p class="hint">list_running_models</p>
             <div id="running-table"></div>
+          </div>
+
+          <div class="subsection">
+            <h2 class="subsection-title">Installed models</h2>
+            <p class="hint">list_models · show_model_info · load_model · stop_model · remove_model</p>
+            <div id="models-table"></div>
           </div>
 
           <div class="subsection">
@@ -302,6 +302,8 @@
       </div>
     </main>
   </div>
+
+  <div class="toast-stack" id="toast-stack" aria-live="polite" aria-atomic="false"></div>
 
   <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
