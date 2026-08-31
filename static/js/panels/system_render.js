@@ -1,6 +1,7 @@
 // Renderers for the System tab, turning a core scanner profile into markup.
 
 import { escapeHtml, fmt, specGrid, specRows, usageBar } from "../lib/format.js";
+import { t, tn } from "../lib/i18n.js";
 
 /**
  * Paint the four summary cards at the top of the tab.
@@ -24,27 +25,37 @@ export function renderSummary(profile) {
 
   document.getElementById("system-cards").innerHTML = `
     <div class="card">
-      <div class="card-label">CPU</div>
-      <div class="card-value">${fmt(cpu.physical_cores)}C / ${fmt(cpu.logical_threads)}T</div>
-      <div class="card-sub" title="${escapeHtml(fmt(cpu.model))}">${escapeHtml(fmt(cpu.model))}</div>
+      <div class="card-label">${escapeHtml(t("card.cpu"))}</div>
+      <div class="card-value" dir="ltr">${fmt(cpu.physical_cores)}C / ${fmt(cpu.logical_threads)}T</div>
+      <div class="card-sub" dir="ltr" title="${escapeHtml(fmt(cpu.model))}">${escapeHtml(fmt(cpu.model))}</div>
     </div>
     <div class="card">
-      <div class="card-label">Memory</div>
-      <div class="card-value">${fmt(memory.used_gb, " GB")} / ${fmt(memory.total_gb, " GB")}</div>
+      <div class="card-label">${escapeHtml(t("card.memory"))}</div>
+      <div class="card-value" dir="ltr">${fmt(memory.used_gb, " GB")} / ${fmt(memory.total_gb, " GB")}</div>
       ${usageBar(memory.usage_percent)}
-      <div class="card-sub">${fmt(memory.usage_percent, "% in use")}</div>
+      <div class="card-sub">${escapeHtml(t("card.memoryInUse", { n: fmt(memory.usage_percent) }))}</div>
     </div>
     <div class="card">
-      <div class="card-label">GPU</div>
-      <div class="card-value">${primaryGpu ? `${escapeHtml(primaryGpu.vram_used)} / ${escapeHtml(primaryGpu.vram_total)}` : "—"}</div>
+      <div class="card-label">${escapeHtml(t("card.gpu"))}</div>
+      <div class="card-value" dir="ltr">${
+        primaryGpu
+          ? `${escapeHtml(primaryGpu.vram_used)} / ${escapeHtml(primaryGpu.vram_total)}`
+          : "—"
+      }</div>
       ${primaryGpu ? usageBar(gpuPercent) : ""}
-      <div class="card-sub" title="${primaryGpu ? escapeHtml(primaryGpu.name) : ""}">${primaryGpu ? escapeHtml(primaryGpu.name) : "not detected"}</div>
+      <div class="card-sub" dir="ltr" title="${primaryGpu ? escapeHtml(primaryGpu.name) : ""}">${
+        primaryGpu ? escapeHtml(primaryGpu.name) : escapeHtml(t("value.notDetected"))
+      }</div>
     </div>
     <div class="card">
-      <div class="card-label">Storage free</div>
-      <div class="card-value">${totalGb ? `${freeGb.toFixed(1)} GB` : "—"}</div>
+      <div class="card-label">${escapeHtml(t("card.storageFree"))}</div>
+      <div class="card-value" dir="ltr">${totalGb ? `${freeGb.toFixed(1)} GB` : "—"}</div>
       ${totalGb ? usageBar(storagePercent) : ""}
-      <div class="card-sub">${totalGb ? `across ${storage.length} drive${storage.length === 1 ? "" : "s"}` : "not detected"}</div>
+      <div class="card-sub">${
+        totalGb
+          ? escapeHtml(tn(storage.length, "card.acrossDrive", "card.acrossDrives"))
+          : escapeHtml(t("value.notDetected"))
+      }</div>
     </div>
   `;
 }
@@ -58,16 +69,16 @@ export function renderSoftware(profile) {
   const system = profile.system || {};
 
   document.getElementById("software-specs").innerHTML = specRows([
-    ["Name", system.name],
-    ["Version", system.version],
-    ["Build", system.build],
-    ["Architecture", system.architecture],
+    [t("spec.name"), system.name],
+    [t("spec.version"), system.version],
+    [t("spec.build"), system.build],
+    [t("spec.architecture"), system.architecture],
   ]);
 
   document.getElementById("runtime-specs").innerHTML = specRows([
-    ["Python", system.python],
-    ["CUDA", (profile.gpu || {}).cuda_version],
-    ["GPUs detected", (profile.gpu || {}).count],
+    [t("spec.python"), system.python],
+    [t("spec.cuda"), (profile.gpu || {}).cuda_version],
+    [t("spec.gpusDetected"), (profile.gpu || {}).count],
   ]);
 }
 
@@ -80,14 +91,14 @@ export function renderCpu(profile) {
   const cpu = profile.cpu || {};
 
   document.getElementById("cpu-specs").innerHTML = specRows([
-    ["Model", cpu.model],
-    ["Architecture", cpu.architecture],
-    ["Physical cores", cpu.physical_cores],
-    ["Logical threads", cpu.logical_threads],
-    ["Reported clock", cpu.reported_clock],
-    ["Current frequency", cpu.current_frequency],
-    ["Max frequency", cpu.max_frequency],
-    ["Instruction sets", (cpu.features || []).join(", ")],
+    [t("spec.model"), cpu.model],
+    [t("spec.architecture"), cpu.architecture],
+    [t("spec.physicalCores"), cpu.physical_cores],
+    [t("spec.logicalThreads"), cpu.logical_threads],
+    [t("spec.reportedClock"), cpu.reported_clock],
+    [t("spec.currentFrequency"), cpu.current_frequency],
+    [t("spec.maxFrequency"), cpu.max_frequency],
+    [t("spec.instructionSets"), (cpu.features || []).join(", ")],
   ]);
 }
 
@@ -101,18 +112,18 @@ export function renderMemory(profile) {
   const modules = memory.modules || [];
 
   document.getElementById("memory-specs").innerHTML = specRows([
-    ["Total", memory.total_gb === undefined ? null : `${memory.total_gb} GB`],
-    ["Used", memory.used_gb === undefined ? null : `${memory.used_gb} GB`],
-    ["Available", memory.available_gb === undefined ? null : `${memory.available_gb} GB`],
-    ["Usage", memory.usage_percent === undefined ? null : `${memory.usage_percent}%`],
-    ["Channels", memory.channels],
-    ["Modules installed", modules.length || null],
+    [t("spec.total"), memory.total_gb === undefined ? null : `${memory.total_gb} GB`],
+    [t("spec.used"), memory.used_gb === undefined ? null : `${memory.used_gb} GB`],
+    [t("spec.available"), memory.available_gb === undefined ? null : `${memory.available_gb} GB`],
+    [t("spec.usage"), memory.usage_percent === undefined ? null : `${memory.usage_percent}%`],
+    [t("spec.channels"), memory.channels],
+    [t("spec.modulesInstalled"), modules.length || null],
   ]);
 
   const modulesEl = document.getElementById("memory-modules");
 
   if (modules.length === 0) {
-    modulesEl.innerHTML = `<div class="empty-state">No RAM module details available.</div>`;
+    modulesEl.innerHTML = `<div class="empty-state">${escapeHtml(t("empty.noRamModules"))}</div>`;
     return;
   }
 
@@ -121,15 +132,15 @@ export function renderMemory(profile) {
       (mod) => `
       <div class="tile">
         <div class="tile-head">
-          <span class="tile-name" title="${escapeHtml(fmt(mod.slot))}">${escapeHtml(fmt(mod.slot))}</span>
-          <span class="chip chip-neutral">${escapeHtml(fmt(mod.type))}</span>
+          <span class="tile-name" dir="ltr" title="${escapeHtml(fmt(mod.slot))}">${escapeHtml(fmt(mod.slot))}</span>
+          <span class="chip chip-neutral" dir="ltr">${escapeHtml(fmt(mod.type))}</span>
         </div>
         ${specGrid([
-          ["Capacity", mod.capacity],
-          ["Manufacturer", mod.manufacturer],
-          ["Part number", (mod.part_number || "").trim()],
-          ["Rated speed", mod.speed],
-          ["Configured speed", mod.configured_speed],
+          [t("spec.capacity"), mod.capacity],
+          [t("spec.manufacturer"), mod.manufacturer],
+          [t("spec.partNumber"), (mod.part_number || "").trim()],
+          [t("spec.ratedSpeed"), mod.speed],
+          [t("spec.configuredSpeed"), mod.configured_speed],
         ])}
       </div>`
     )
@@ -146,14 +157,14 @@ export function renderGpu(profile) {
   const devices = gpu.devices || [];
 
   document.getElementById("gpu-specs").innerHTML = specRows([
-    ["Devices detected", gpu.count === undefined ? null : gpu.count],
-    ["CUDA version", gpu.cuda_version],
+    [t("spec.devicesDetected"), gpu.count === undefined ? null : gpu.count],
+    [t("spec.cudaVersion"), gpu.cuda_version],
   ]);
 
   const devicesEl = document.getElementById("gpu-devices");
 
   if (devices.length === 0) {
-    devicesEl.innerHTML = `<div class="empty-state">No NVIDIA GPU detected.</div>`;
+    devicesEl.innerHTML = `<div class="empty-state">${escapeHtml(t("empty.noGpu"))}</div>`;
     return;
   }
 
@@ -163,15 +174,15 @@ export function renderGpu(profile) {
       return `
         <div class="tile">
           <div class="tile-head">
-            <span class="tile-name" title="${escapeHtml(fmt(dev.name))}">${escapeHtml(fmt(dev.name))}</span>
-            <span class="chip chip-neutral">CC ${escapeHtml(fmt(dev.compute_capability))}</span>
+            <span class="tile-name" dir="ltr" title="${escapeHtml(fmt(dev.name))}">${escapeHtml(fmt(dev.name))}</span>
+            <span class="chip chip-neutral" dir="ltr">CC ${escapeHtml(fmt(dev.compute_capability))}</span>
           </div>
           ${Number.isFinite(percent) ? usageBar(percent) : ""}
           ${specGrid([
-            ["Driver", dev.driver],
-            ["VRAM total", dev.vram_total],
-            ["VRAM used", dev.vram_used],
-            ["VRAM free", dev.vram_free],
+            [t("spec.driver"), dev.driver],
+            [t("spec.vramTotal"), dev.vram_total],
+            [t("spec.vramUsed"), dev.vram_used],
+            [t("spec.vramFree"), dev.vram_free],
           ])}
         </div>`;
     })
@@ -188,7 +199,7 @@ export function renderStorage(profile) {
   const drivesEl = document.getElementById("storage-drives");
 
   if (drives.length === 0) {
-    drivesEl.innerHTML = `<div class="empty-state">No drives detected.</div>`;
+    drivesEl.innerHTML = `<div class="empty-state">${escapeHtml(t("empty.noDrives"))}</div>`;
     return;
   }
 
@@ -198,14 +209,16 @@ export function renderStorage(profile) {
       return `
         <div class="tile">
           <div class="tile-head">
-            <span class="tile-name">${escapeHtml(drive.drive)}</span>
-            <span class="model-size">${percent.toFixed(0)}% used</span>
+            <span class="tile-name" dir="ltr">${escapeHtml(drive.drive)}</span>
+            <span class="model-size">${escapeHtml(
+              t("spec.percentUsed", { n: percent.toFixed(0) })
+            )}</span>
           </div>
           ${usageBar(percent)}
           ${specGrid([
-            ["Total", `${drive.total_gb} GB`],
-            ["Used", `${drive.used_gb} GB`],
-            ["Free", `${drive.free_gb} GB`],
+            [t("spec.total"), `${drive.total_gb} GB`],
+            [t("spec.used"), `${drive.used_gb} GB`],
+            [t("spec.free"), `${drive.free_gb} GB`],
           ])}
         </div>`;
     })

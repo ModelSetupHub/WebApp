@@ -5,33 +5,35 @@
 // summary}, ...]}, so everything here is derived from that one shape.
 
 import { escapeHtml } from "../lib/format.js";
+import { t, tn } from "../lib/i18n.js";
 import { indexOfName, seriesColor } from "./benchmark_store.js";
 import { optionChips } from "./benchmark_render.js";
 
 // Metrics shown as bar blocks and as table columns. better tells the ranking
 // which direction wins: generation rate should be high, wall time should be low.
+// Titles and units are dictionary keys rather than literals.
 const METRICS = [
   {
     key: "average_output_tokens_per_second",
-    title: "Output speed",
-    note: "tokens generated per second · higher is better",
-    short: "output tok/s",
+    title: "bench.metricOutput",
+    note: "bench.metricOutputNote",
+    short: "bench.metricOutputShort",
     better: "high",
     digits: 1,
   },
   {
     key: "average_prompt_tokens_per_second",
-    title: "Prompt speed",
-    note: "prompt tokens processed per second · higher is better",
-    short: "prompt tok/s",
+    title: "bench.metricPrompt",
+    note: "bench.metricPromptNote",
+    short: "bench.metricPromptShort",
     better: "high",
     digits: 1,
   },
   {
     key: "average_duration_seconds",
-    title: "Response time",
-    note: "seconds per prompt · lower is better",
-    short: "seconds",
+    title: "bench.metricDuration",
+    note: "bench.metricDurationNote",
+    short: "bench.metricDurationShort",
     better: "low",
     digits: 2,
   },
@@ -129,8 +131,8 @@ function metricBars(tests) {
 
         return `
           <div class="bench-bar-row" style="--series-color:${testColor(test, position)}">
-            <span class="bench-bar-name" title="${escapeHtml(test.name)}">${escapeHtml(test.name)}</span>
-            <span class="bench-bar-value${isBest ? " is-best" : ""}${missing ? " is-empty" : ""}">
+            <span class="bench-bar-name" dir="ltr" title="${escapeHtml(test.name)}">${escapeHtml(test.name)}</span>
+            <span class="bench-bar-value${isBest ? " is-best" : ""}${missing ? " is-empty" : ""}" dir="ltr">
               ${escapeHtml(num(value, metric.digits))}
             </span>
             <span class="bench-bar-track">
@@ -143,8 +145,8 @@ function metricBars(tests) {
     return `
       <section class="bench-metric">
         <div class="bench-metric-head">
-          <h3 class="bench-metric-title">${escapeHtml(metric.title)}</h3>
-          <span class="bench-metric-note">${escapeHtml(metric.note)}</span>
+          <h3 class="bench-metric-title">${escapeHtml(t(metric.title))}</h3>
+          <span class="bench-metric-note">${escapeHtml(t(metric.note))}</span>
         </div>
         <div class="bench-metric-rows">${rows}</div>
       </section>`;
@@ -168,25 +170,25 @@ function summaryTable(tests) {
         const value = test.summary[metric.key];
         const isBest =
           value !== null && value !== undefined && value === bests[index] && tests.length > 1;
-        return `<td class="is-number${isBest ? " is-best" : ""}">${escapeHtml(
+        return `<td class="is-number${isBest ? " is-best" : ""}" dir="ltr">${escapeHtml(
           num(value, metric.digits)
         )}</td>`;
       }).join("");
 
       return `
         <tr style="--series-color:${testColor(test, position)}">
-          <td class="cell-config">${escapeHtml(test.name)}</td>
+          <td class="cell-config" dir="ltr">${escapeHtml(test.name)}</td>
           ${cells}
-          <td class="is-number">${test.summary.total_output_tokens}</td>
+          <td class="is-number" dir="ltr">${test.summary.total_output_tokens}</td>
           <td class="is-number${failed ? " is-failed" : ""}">
-            ${failed ? `${failed} failed` : "all passed"}
+            ${escapeHtml(failed ? t("bench.nFailed", { n: failed }) : t("bench.allPassed"))}
           </td>
         </tr>`;
     })
     .join("");
 
   const headers = METRICS.map(
-    (metric) => `<th class="is-number">${escapeHtml(metric.short)}</th>`
+    (metric) => `<th class="is-number">${escapeHtml(t(metric.short))}</th>`
   ).join("");
 
   return `
@@ -194,10 +196,10 @@ function summaryTable(tests) {
       <table class="data-table bench-table">
         <thead>
           <tr>
-            <th>configuration</th>
+            <th>${escapeHtml(t("bench.colConfiguration"))}</th>
             ${headers}
-            <th class="is-number">output tokens</th>
-            <th class="is-number">prompts</th>
+            <th class="is-number">${escapeHtml(t("bench.colOutputTokens"))}</th>
+            <th class="is-number">${escapeHtml(t("bench.colPrompts"))}</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
@@ -222,10 +224,8 @@ function verdict(tests) {
     return `
       <div class="bench-verdict is-empty">
         <div>
-          <div class="bench-verdict-label">No verdict</div>
-          <div class="bench-verdict-note">
-            No configuration reported a generation rate. Check the failures below.
-          </div>
+          <div class="bench-verdict-label">${escapeHtml(t("bench.noVerdict"))}</div>
+          <div class="bench-verdict-note">${escapeHtml(t("bench.noVerdictNote"))}</div>
         </div>
       </div>`;
   }
@@ -236,7 +236,7 @@ function verdict(tests) {
     .map((test) => test.summary[metric.key])
     .filter((value) => value !== null && value !== undefined);
 
-  let note = "It was the only configuration with a measured generation rate.";
+  let note = t("bench.verdictOnly");
 
   if (rates.length > 0) {
     const runnerUp = Math.max(...rates);
@@ -244,15 +244,15 @@ function verdict(tests) {
 
     note =
       gain >= 0.5
-        ? `${gain.toFixed(1)}% faster at generating than the next best configuration.`
-        : "Effectively tied with the next best configuration.";
+        ? t("bench.verdictGain", { percent: gain.toFixed(1) })
+        : t("bench.verdictTied");
   }
 
   return `
     <div class="bench-verdict">
       <div>
-        <div class="bench-verdict-label">Fastest configuration</div>
-        <div class="bench-verdict-name">${escapeHtml(winner.name)}</div>
+        <div class="bench-verdict-label">${escapeHtml(t("bench.verdictLabel"))}</div>
+        <div class="bench-verdict-name" dir="ltr">${escapeHtml(winner.name)}</div>
         <div class="bench-verdict-note">${escapeHtml(note)}</div>
       </div>
     </div>`;
@@ -268,35 +268,41 @@ function verdict(tests) {
 function detail(test, position) {
   const prompts = test.results
     .map((result) => {
+      // The prompt is whatever the user typed, so it keeps the page's own
+      // direction rather than being forced either way.
       if (!result.success) {
         return `
           <div class="bench-prompt">
             <div class="bench-prompt-head">
-              <span class="bench-prompt-index">#${result.index}</span>
+              <span class="bench-prompt-index" dir="ltr">#${result.index}</span>
               <span class="bench-prompt-text" title="${escapeHtml(result.prompt)}">${escapeHtml(result.prompt)}</span>
-              <span class="chip chip-error">failed</span>
+              <span class="chip chip-error">${escapeHtml(t("bench.promptFailed"))}</span>
             </div>
-            <div class="bench-prompt-error">${escapeHtml(result.error || "Unknown error")}</div>
+            <div class="bench-prompt-error">${escapeHtml(
+              result.error || t("bench.unknownError")
+            )}</div>
           </div>`;
       }
 
       const output =
         result.response === undefined
           ? ""
-          : `<pre class="bench-output">${escapeHtml(result.response || "(empty response)")}</pre>`;
+          : `<pre class="bench-output">${escapeHtml(
+              result.response || t("bench.emptyResponse")
+            )}</pre>`;
 
       return `
         <div class="bench-prompt">
           <div class="bench-prompt-head">
-            <span class="bench-prompt-index">#${result.index}</span>
+            <span class="bench-prompt-index" dir="ltr">#${result.index}</span>
             <span class="bench-prompt-text" title="${escapeHtml(result.prompt)}">${escapeHtml(result.prompt)}</span>
           </div>
           <div class="bench-prompt-stats">
-            <span class="bench-stat"><b>${num(result.duration_seconds, 2)}</b> s</span>
-            <span class="bench-stat"><b>${num(result.output_tokens_per_second, 1)}</b> output tok/s</span>
-            <span class="bench-stat"><b>${num(result.prompt_tokens_per_second, 1)}</b> prompt tok/s</span>
-            <span class="bench-stat"><b>${result.output_tokens}</b> output tokens</span>
-            <span class="bench-stat"><b>${result.prompt_tokens}</b> prompt tokens</span>
+            <span class="bench-stat"><b dir="ltr">${num(result.duration_seconds, 2)}</b> ${escapeHtml(t("bench.statSeconds"))}</span>
+            <span class="bench-stat"><b dir="ltr">${num(result.output_tokens_per_second, 1)}</b> ${escapeHtml(t("bench.statOutputRate"))}</span>
+            <span class="bench-stat"><b dir="ltr">${num(result.prompt_tokens_per_second, 1)}</b> ${escapeHtml(t("bench.statPromptRate"))}</span>
+            <span class="bench-stat"><b dir="ltr">${result.output_tokens}</b> ${escapeHtml(t("bench.statOutputTokens"))}</span>
+            <span class="bench-stat"><b dir="ltr">${result.prompt_tokens}</b> ${escapeHtml(t("bench.statPromptTokens"))}</span>
           </div>
           ${output}
         </div>`;
@@ -304,15 +310,16 @@ function detail(test, position) {
     .join("");
 
   const failed = test.results.filter((result) => !result.success).length;
+  const meta =
+    tn(test.results.length, "bench.detailPrompt", "bench.detailPrompts") +
+    (failed ? t("bench.detailFailedSuffix", { n: failed }) : "");
 
   return `
     <article class="bench-detail" style="--series-color:${testColor(test, position)}">
       <button type="button" class="bench-detail-head" aria-expanded="false">
         <span class="bench-group-caret" aria-hidden="true">▶</span>
-        <span class="bench-detail-name">${escapeHtml(test.name)}</span>
-        <span class="bench-detail-meta">
-          ${test.results.length} prompt${test.results.length === 1 ? "" : "s"}${failed ? ` · ${failed} failed` : ""}
-        </span>
+        <span class="bench-detail-name" dir="ltr">${escapeHtml(test.name)}</span>
+        <span class="bench-detail-meta">${escapeHtml(meta)}</span>
       </button>
       <div class="bench-detail-body">
         <div class="bench-detail-options">${optionChips(test.configuration)}</div>
@@ -331,7 +338,7 @@ export function renderResults(el, job) {
   const tests = (job.result && job.result.tests) || [];
 
   if (tests.length === 0) {
-    el.innerHTML = `<div class="empty-state">The comparison produced no results.</div>`;
+    el.innerHTML = `<div class="empty-state">${escapeHtml(t("bench.noResults"))}</div>`;
     return;
   }
 
@@ -339,15 +346,20 @@ export function renderResults(el, job) {
     <div class="bench-results">
       <div class="bench-results-head">
         <div>
-          <div class="bench-results-title">
-            ${escapeHtml(job.result.model)} · ${tests.length} configuration${tests.length === 1 ? "" : "s"}
-          </div>
-          <div class="bench-results-sub">
-            ${job.prompts.length} prompt${job.prompts.length === 1 ? "" : "s"} each ·
-            ${num(job.elapsed_seconds, 1)} s total · finished ${escapeHtml(job.finished_at || "")}
-          </div>
+          <div class="bench-results-title">${escapeHtml(
+            t("bench.resultsHead", { model: job.result.model, n: tests.length })
+          )}</div>
+          <div class="bench-results-sub">${escapeHtml(
+            t("bench.resultsSub", {
+              prompts: job.prompts.length,
+              seconds: num(job.elapsed_seconds, 1),
+              time: job.finished_at || "",
+            })
+          )}</div>
         </div>
-        <button type="button" class="btn btn-sm" id="btn-bench-discard">Discard results</button>
+        <button type="button" class="btn btn-sm" id="btn-bench-discard">${escapeHtml(
+          t("bench.discardResults")
+        )}</button>
       </div>
 
       ${verdict(tests)}

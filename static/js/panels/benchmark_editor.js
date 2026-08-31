@@ -4,8 +4,13 @@
 // Every option has three states, not two — set to a value, or not set at all —
 // so a blank field means "leave the model's default alone" and is never sent.
 // Booleans therefore render as a three-way select rather than a checkbox.
+//
+// Option names stay in Ollama's own spelling in both languages; only the group
+// headings and the hints below each field are translated, and those come from
+// the dictionary rather than from the server's schema.
 
 import { escapeHtml } from "../lib/format.js";
+import { t, tn } from "../lib/i18n.js";
 
 // Sampling is what most comparisons vary, so it is the one group open on load.
 const OPEN_BY_DEFAULT = "Sampling";
@@ -24,20 +29,23 @@ let schema = [];
  */
 function optionField(option) {
   const key = escapeHtml(option.key);
-  const hint = option.hint ? `<span class="field-hint">${escapeHtml(option.hint)}</span>` : "";
+  // The server ships an English hint; the dictionary overrides it per language
+  // and falls back to the server's text for an option added there but not here.
+  const hintText = t(`opt.${option.key}`) === `opt.${option.key}` ? option.hint : t(`opt.${option.key}`);
+  const hint = hintText ? `<span class="field-hint">${escapeHtml(hintText)}</span>` : "";
 
   let control;
 
   if (option.type === "bool") {
     control = `
-      <select class="input" data-option="${key}">
-        <option value="">not set</option>
+      <select class="input is-ltr" data-option="${key}">
+        <option value="">${escapeHtml(t("bench.notSet"))}</option>
         <option value="true">true</option>
         <option value="false">false</option>
       </select>`;
   } else if (option.type === "list") {
-    control = `<input class="input" data-option="${key}" autocomplete="off" spellcheck="false"
-      placeholder="${escapeHtml(option.placeholder || "")}">`;
+    control = `<input class="input is-ltr" dir="ltr" data-option="${key}" autocomplete="off"
+      spellcheck="false" placeholder="${escapeHtml(option.placeholder || "")}">`;
   } else {
     const bounds = [
       option.min !== undefined ? `min="${escapeHtml(option.min)}"` : "",
@@ -47,13 +55,13 @@ function optionField(option) {
       .filter(Boolean)
       .join(" ");
 
-    control = `<input class="input" type="number" data-option="${key}" ${bounds}
+    control = `<input class="input is-ltr" type="number" dir="ltr" data-option="${key}" ${bounds}
       placeholder="${escapeHtml(option.placeholder || "")}">`;
   }
 
   return `
     <label class="bench-option field" data-option-field="${key}">
-      <span class="field-label">${escapeHtml(option.label || option.key)}</span>
+      <span class="field-label is-ltr" dir="ltr">${escapeHtml(option.label || option.key)}</span>
       ${control}
       ${hint}
     </label>`;
@@ -84,12 +92,14 @@ export function buildEditor(options) {
   groupsEl.innerHTML = groups
     .map((group) => {
       const open = group.title === OPEN_BY_DEFAULT ? " is-open" : "";
+      // data-group keeps the server's English title so lookups and tests do not
+      // depend on the display language; only the heading text is translated.
       return `
         <section class="bench-group${open}" data-group="${escapeHtml(group.title)}">
           <button type="button" class="bench-group-head" aria-expanded="${open ? "true" : "false"}">
             <span class="bench-group-caret" aria-hidden="true">▶</span>
-            ${escapeHtml(group.title)}
-            <span class="bench-group-badge is-empty">0 set</span>
+            ${escapeHtml(t(`optgroup.${group.title}`))}
+            <span class="bench-group-badge is-empty">${escapeHtml(t("bench.groupBadge", { n: 0 }))}</span>
           </button>
           <div class="bench-group-body">
             ${group.options.map(optionField).join("")}
@@ -131,13 +141,15 @@ function markFilled() {
     });
 
     const badge = group.querySelector(".bench-group-badge");
-    badge.textContent = `${set} set`;
+    badge.textContent = t("bench.groupBadge", { n: set });
     badge.classList.toggle("is-empty", set === 0);
     total += set;
   });
 
   countEl.textContent =
-    total === 0 ? "No options set — this configuration would run model defaults." : `${total} option${total === 1 ? "" : "s"} set`;
+    total === 0
+      ? t("bench.optionsSetNone")
+      : tn(total, "bench.optionSet", "bench.optionsSet");
 }
 
 /** Empty every field in the editor. */

@@ -3,6 +3,7 @@
 import { runAction } from "../lib/actions.js";
 import { api, postJson } from "../lib/api.js";
 import { hideAlert, showAlert, skeletons } from "../lib/format.js";
+import { t } from "../lib/i18n.js";
 import { getInstalledModels, setInstalledModels } from "../lib/state.js";
 import { setButtonBusy, toast } from "../lib/toast.js";
 import {
@@ -39,7 +40,7 @@ export async function loadModels({ quiet = false } = {}) {
   const restore = setButtonBusy(quiet ? null : refreshModelsBtn);
 
   if (!quiet) {
-    modelsMetaEl.textContent = "Loading…";
+    modelsMetaEl.textContent = t("system.scanning");
     document.getElementById("models-cards").innerHTML = skeletons(3);
   }
 
@@ -61,9 +62,11 @@ export async function loadModels({ quiet = false } = {}) {
     renderRunningTable(running);
     syncModelSelects();
 
-    modelsMetaEl.textContent = `Updated ${new Date().toLocaleTimeString()}`;
+    modelsMetaEl.textContent = t("models.updatedAt", {
+      time: new Date().toLocaleTimeString(),
+    });
   } catch (error) {
-    showAlert(modelsErrorEl, `Could not list models — ${error.message}`);
+    showAlert(modelsErrorEl, t("models.listFailed", { error: error.message }));
     modelsMetaEl.textContent = "";
   } finally {
     restore();
@@ -82,7 +85,7 @@ function rowAction(act, model, button) {
   if (act === "info") {
     return runAction(
       `show_model_info("${model}")`,
-      `Reading ${model}`,
+      t("models.reading", { model }),
       () => api(`/api/ollama/models/info?model=${encodeURIComponent(model)}`),
       { onSuccess: (res) => formatModelInfo(res.data), refresh: false, button }
     );
@@ -91,14 +94,12 @@ function rowAction(act, model, button) {
   if (act === "load") {
     return runAction(
       `load_model("${model}")`,
-      `Loading ${model}`,
+      t("models.loading", { model }),
       () => postJson("/api/ollama/models/load", { model, keep_alive: DEFAULT_KEEP_ALIVE }),
       {
         button,
         onSuccess: (res) =>
-          res.already_loaded
-            ? `Model "${model}" is already loaded.`
-            : `Model "${model}" loaded into memory.`,
+          t(res.already_loaded ? "models.alreadyLoaded" : "models.loaded", { model }),
       }
     );
   }
@@ -106,23 +107,23 @@ function rowAction(act, model, button) {
   if (act === "stop") {
     return runAction(
       `stop_model("${model}")`,
-      `Stopping ${model}`,
+      t("models.stopping", { model }),
       () => postJson("/api/ollama/models/stop", { model }),
-      { button, onSuccess: (res) => res.data || `Model "${model}" stopped.` }
+      { button, onSuccess: (res) => res.data || t("models.stopped", { model }) }
     );
   }
 
   if (act === "remove") {
     // Deleting a model is not recoverable from this UI, so confirm first.
-    if (!window.confirm(`Remove "${model}" from local Ollama storage? This cannot be undone.`)) {
+    if (!window.confirm(t("models.removeConfirm", { model }))) {
       return Promise.resolve(false);
     }
 
     return runAction(
       `remove_model("${model}")`,
-      `Removing ${model}`,
+      t("models.removing", { model }),
       () => postJson("/api/ollama/models/remove", { model }),
-      { button, onSuccess: (res) => res.data || `Model "${model}" removed.` }
+      { button, onSuccess: (res) => res.data || t("models.removed", { model }) }
     );
   }
 
@@ -154,18 +155,18 @@ function bindRunForm() {
     const button = form.querySelector('button[type="submit"]');
 
     if (!model) {
-      toast("error", "Cannot run", "Select a model first.");
+      toast("error", t("models.cannotRun"), t("models.selectModelFirst"));
       return;
     }
 
     if (!prompt.trim()) {
-      toast("error", "Cannot run", "Enter a prompt first.");
+      toast("error", t("models.cannotRun"), t("models.enterPromptFirst"));
       return;
     }
 
     runAction(
       `run_model("${model}")`,
-      `Running ${model}`,
+      t("models.running", { model }),
       () => postJson("/api/ollama/models/run", { model, prompt }),
       { refresh: false, button }
     );
@@ -181,20 +182,18 @@ function bindLoadForm() {
     const button = form.querySelector('button[type="submit"]');
 
     if (!model) {
-      toast("error", "Cannot load", "Select a model first.");
+      toast("error", t("models.cannotLoad"), t("models.selectModelFirst"));
       return;
     }
 
     runAction(
       `load_model("${model}", keep_alive="${keepAlive}")`,
-      `Loading ${model}`,
+      t("models.loading", { model }),
       () => postJson("/api/ollama/models/load", { model, keep_alive: keepAlive }),
       {
         button,
         onSuccess: (res) =>
-          res.already_loaded
-            ? `Model "${model}" is already loaded.`
-            : `Model "${model}" loaded into memory.`,
+          t(res.already_loaded ? "models.alreadyLoaded" : "models.loaded", { model }),
       }
     );
   });
@@ -209,15 +208,15 @@ function bindAddForm() {
     const button = form.querySelector('button[type="submit"]');
 
     if (!name || !path) {
-      toast("error", "Cannot add", "Both a model name and a file path are required.");
+      toast("error", t("models.cannotAdd"), t("models.cannotAddBody"));
       return;
     }
 
     runAction(
       `add_model("${name}")`,
-      `Adding ${name}`,
+      t("models.adding", { model: name }),
       () => postJson("/api/ollama/models/add", { model_name: name, model_path: path }),
-      { button, onSuccess: (res) => res.data || `Model "${name}" created.` }
+      { button, onSuccess: (res) => res.data || t("models.added", { model: name }) }
     );
   });
 }
@@ -239,25 +238,28 @@ function bindConfigureForm() {
     });
 
     if (!source || !target) {
-      toast("error", "Cannot create", "A source model and a new model name are required.");
+      toast("error", t("models.cannotCreate"), t("models.cannotCreateBody"));
       return;
     }
 
     if (Object.keys(parameters).length === 0) {
-      toast("error", "Cannot create", "Set at least one parameter.");
+      toast("error", t("models.cannotCreate"), t("models.needOneParam"));
       return;
     }
 
     runAction(
       `configure_model("${source}" -> "${target}")`,
-      `Creating ${target}`,
+      t("models.creating", { model: target }),
       () =>
         postJson("/api/ollama/models/configure", {
           source_model: source,
           target_model: target,
           parameters,
         }),
-      { button, onSuccess: (res) => res.data || `Model "${target}" created from "${source}".` }
+      {
+        button,
+        onSuccess: (res) => res.data || t("models.created", { target, source }),
+      }
     );
   });
 }

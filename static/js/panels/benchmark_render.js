@@ -2,10 +2,14 @@
 // editor, the import preview and the configuration cards.
 
 import { escapeHtml } from "../lib/format.js";
+import { t } from "../lib/i18n.js";
 import { getConfigurations, seriesColor } from "./benchmark_store.js";
 
 /**
  * Render one option's value as it appears on a configuration card.
+ *
+ * Option names are Ollama's own identifiers and values are numbers, so the chip
+ * reads left to right whatever the interface language is.
  *
  * @param {string} key Option name.
  * @param {*} value Option value.
@@ -13,7 +17,7 @@ import { getConfigurations, seriesColor } from "./benchmark_store.js";
  */
 function optionChip(key, value) {
   const text = Array.isArray(value) ? value.join(", ") : String(value);
-  return `<span class="bench-option-chip" title="${escapeHtml(`${key} = ${text}`)}">
+  return `<span class="bench-option-chip" dir="ltr" title="${escapeHtml(`${key} = ${text}`)}">
     <b>${escapeHtml(key)}</b> ${escapeHtml(text)}</span>`;
 }
 
@@ -27,7 +31,7 @@ export function optionChips(options) {
   const entries = Object.entries(options || {});
 
   if (entries.length === 0) {
-    return `<span class="bench-option-chip">model defaults</span>`;
+    return `<span class="bench-option-chip">${escapeHtml(t("bench.modelDefaults"))}</span>`;
   }
 
   return entries.map(([key, value]) => optionChip(key, value)).join("");
@@ -42,9 +46,7 @@ export function renderConfigList(el) {
   const configurations = getConfigurations();
 
   if (configurations.length === 0) {
-    el.innerHTML = `<div class="empty-state">
-      No configurations yet. Add one by hand, or upload a configuration file.
-    </div>`;
+    el.innerHTML = `<div class="empty-state">${escapeHtml(t("bench.emptyConfigList"))}</div>`;
     return;
   }
 
@@ -54,14 +56,14 @@ export function renderConfigList(el) {
       return `
         <article class="bench-config" style="--series-color:${color}">
           <div class="bench-config-head">
-            <span class="bench-config-index">${String(index + 1).padStart(2, "0")}</span>
-            <span class="bench-config-name" title="${escapeHtml(config.name)}">${escapeHtml(config.name)}</span>
+            <span class="bench-config-index" dir="ltr">${String(index + 1).padStart(2, "0")}</span>
+            <span class="bench-config-name" dir="ltr" title="${escapeHtml(config.name)}">${escapeHtml(config.name)}</span>
           </div>
           <div class="bench-config-options">${optionChips(config.options)}</div>
           <div class="bench-config-foot">
-            <button type="button" class="btn btn-sm" data-config-act="edit" data-config-id="${config.id}">Edit</button>
-            <button type="button" class="btn btn-sm" data-config-act="copy" data-config-id="${config.id}">Duplicate</button>
-            <button type="button" class="btn btn-sm btn-danger" data-config-act="remove" data-config-id="${config.id}">Remove</button>
+            <button type="button" class="btn btn-sm" data-config-act="edit" data-config-id="${config.id}">${escapeHtml(t("btn.edit"))}</button>
+            <button type="button" class="btn btn-sm" data-config-act="copy" data-config-id="${config.id}">${escapeHtml(t("btn.duplicate"))}</button>
+            <button type="button" class="btn btn-sm btn-danger" data-config-act="remove" data-config-id="${config.id}">${escapeHtml(t("btn.remove"))}</button>
           </div>
         </article>`;
     })

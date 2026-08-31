@@ -8,6 +8,7 @@
 
 import { api, postJson } from "../lib/api.js";
 import { escapeHtml, hideAlert, showAlert } from "../lib/format.js";
+import { t, tn } from "../lib/i18n.js";
 import { getInstalledModels, getOllamaStatus } from "../lib/state.js";
 import { setButtonBusy, toast } from "../lib/toast.js";
 import {
@@ -102,28 +103,32 @@ function renderCards() {
 
   cardsEl.innerHTML = `
     <div class="card">
-      <div class="card-label">Configurations</div>
-      <div class="card-value">${configurations.length}</div>
-      <div class="card-sub">compared against one model</div>
+      <div class="card-label">${escapeHtml(t("bench.cardConfigs"))}</div>
+      <div class="card-value" dir="ltr">${configurations.length}</div>
+      <div class="card-sub">${escapeHtml(t("bench.cardConfigsSub"))}</div>
     </div>
     <div class="card">
-      <div class="card-label">Prompts</div>
-      <div class="card-value">${prompts.length}</div>
-      <div class="card-sub">run against every configuration</div>
+      <div class="card-label">${escapeHtml(t("bench.cardPrompts"))}</div>
+      <div class="card-value" dir="ltr">${prompts.length}</div>
+      <div class="card-sub">${escapeHtml(t("bench.cardPromptsSub"))}</div>
     </div>
     <div class="card">
-      <div class="card-label">Total runs</div>
-      <div class="card-value ${runs > 0 ? "" : "is-unknown"}">${runs || "—"}</div>
-      <div class="card-sub">generations this comparison performs</div>
+      <div class="card-label">${escapeHtml(t("bench.cardTotalRuns"))}</div>
+      <div class="card-value ${runs > 0 ? "" : "is-unknown"}" dir="ltr">${runs || "—"}</div>
+      <div class="card-sub">${escapeHtml(t("bench.cardTotalRunsSub"))}</div>
     </div>
     <div class="card">
-      <div class="card-label">Server</div>
+      <div class="card-label">${escapeHtml(t("bench.cardServer"))}</div>
       ${
         serverUp === null
           ? '<div class="card-value is-unknown">—</div>'
-          : `<div class="card-value ${serverUp ? "is-good" : "is-bad"}">${serverUp ? "running" : "stopped"}</div>`
+          : `<div class="card-value ${serverUp ? "is-good" : "is-bad"}">${escapeHtml(
+              t(serverUp ? "value.running" : "value.stopped")
+            )}</div>`
       }
-      <div class="card-sub">${serverUp ? "ready to benchmark" : "start Ollama before running"}</div>
+      <div class="card-sub">${escapeHtml(
+        t(serverUp ? "bench.cardServerReady" : "bench.cardServerNotReady")
+      )}</div>
     </div>`;
 }
 
@@ -136,8 +141,8 @@ function renderSetup() {
 
   configCountEl.textContent =
     configurations.length === 0
-      ? "No configurations yet"
-      : `${configurations.length} configuration${configurations.length === 1 ? "" : "s"} ready`;
+      ? t("bench.noConfigsYet")
+      : tn(configurations.length, "bench.configReady", "bench.configsReady");
 
   clearBtn.disabled = configurations.length === 0 || isRunning;
   exportBtn.disabled = configurations.length === 0;
@@ -149,8 +154,8 @@ function renderSetup() {
 function updateRunState() {
   if (isRunning) {
     runStateEl.className = "control-title";
-    runStateEl.textContent = "Comparison in progress";
-    runNoteEl.textContent = "The setup is locked until this run finishes.";
+    runStateEl.textContent = t("bench.inProgress");
+    runNoteEl.textContent = t("bench.inProgressNote");
     runBtn.disabled = true;
     return;
   }
@@ -162,25 +167,27 @@ function updateRunState() {
   const blockers = [];
 
   if (status && status.running === false) {
-    blockers.push("the Ollama server is not running");
+    blockers.push(t("bench.missingServer"));
   }
 
   if (!modelEl.value) {
-    blockers.push("no model is selected");
+    blockers.push(t("bench.missingModel"));
   }
 
   if (prompts.length === 0) {
-    blockers.push("no prompts were written");
+    blockers.push(t("bench.missingPrompts"));
   }
 
   if (configurations.length === 0) {
-    blockers.push("no configurations were added");
+    blockers.push(t("bench.missingConfigs"));
   }
 
   if (blockers.length > 0) {
     runStateEl.className = "control-title is-bad";
-    runStateEl.textContent = "Not ready to run";
-    runNoteEl.textContent = `Still missing: ${blockers.join(", ")}.`;
+    runStateEl.textContent = t("bench.notReady");
+    runNoteEl.textContent = t("bench.stillMissing", {
+      items: blockers.join(t("bench.listSeparator")),
+    });
     runBtn.disabled = true;
     return;
   }
@@ -188,10 +195,8 @@ function updateRunState() {
   const runs = configurations.length * prompts.length;
 
   runStateEl.className = "control-title is-good";
-  runStateEl.textContent = "Ready to run";
-  runNoteEl.textContent =
-    `${runs} generation${runs === 1 ? "" : "s"} against ${modelEl.value}. ` +
-    "Each one is timed separately, with model load time excluded.";
+  runStateEl.textContent = t("bench.ready");
+  runNoteEl.textContent = t("bench.readyNote", { n: runs, model: modelEl.value });
   runBtn.disabled = false;
 }
 
@@ -228,8 +233,8 @@ function toggleImport(open) {
 function openForAdd() {
   editingId = null;
   editingExtras = {};
-  editorTitleEl.textContent = "Add a configuration";
-  editorSaveBtn.textContent = "Add";
+  editorTitleEl.textContent = t("bench.editorAdd");
+  editorSaveBtn.textContent = t("btn.add");
   resetEditor();
   toggleEditor(true);
 }
@@ -248,8 +253,8 @@ function openForEdit(id) {
 
   editingId = config.id;
   editingExtras = fillEditor(config);
-  editorTitleEl.textContent = `Edit "${config.name}"`;
-  editorSaveBtn.textContent = "Save";
+  editorTitleEl.textContent = t("bench.editorEdit", { name: config.name });
+  editorSaveBtn.textContent = t("btn.save");
   toggleEditor(true);
 }
 
@@ -267,20 +272,16 @@ function bindEditor() {
     const draft = readEditor(editingExtras);
 
     if (Object.keys(draft.options).length === 0) {
-      toast(
-        "error",
-        "Nothing to save",
-        "Set at least one option, otherwise this configuration is identical to the model's defaults."
-      );
+      toast("error", t("bench.nothingToSave"), t("bench.nothingToSaveBody"));
       return;
     }
 
     if (editingId === null) {
       const stored = addConfiguration(draft);
-      toast("success", "Configuration added", stored.name);
+      toast("success", t("bench.configAdded"), stored.name);
     } else {
       const stored = updateConfiguration(editingId, draft);
-      toast("success", "Configuration saved", stored ? stored.name : "");
+      toast("success", t("bench.configSaved"), stored ? stored.name : "");
     }
 
     renderSetup();
@@ -309,7 +310,7 @@ function bindConfigList() {
       renderSetup();
 
       if (copy) {
-        toast("success", "Configuration duplicated", copy.name);
+        toast("success", t("bench.configDuplicated"), copy.name);
       }
       return;
     }
@@ -328,7 +329,7 @@ function bindConfigList() {
   });
 
   clearBtn.addEventListener("click", () => {
-    if (!window.confirm("Remove every configuration from this comparison?")) {
+    if (!window.confirm(t("bench.clearConfirm"))) {
       return;
     }
 
@@ -357,7 +358,7 @@ function showPreviewError(message) {
   previewEl.classList.add("is-bad");
   previewEl.innerHTML = `
     <div class="bench-preview-head">
-      <span class="bench-preview-title">This file could not be read</span>
+      <span class="bench-preview-title">${escapeHtml(t("bench.importUnreadable"))}</span>
     </div>
     <div class="bench-preview-error">${escapeHtml(message)}</div>`;
 }
@@ -368,17 +369,22 @@ function showPreviewError(message) {
  * Applying is a separate step because a file may also carry a model and prompts,
  * which would otherwise silently overwrite what the user already typed.
  *
- * @param {object} document Parsed document from the parse endpoint.
+ * @param {object} document_ Parsed document from the parse endpoint.
+ * @param {boolean} [fromFile] Whether the source is a file name rather than the
+ *     paste box. The endpoint labels pasted input in English, so the label is
+ *     produced here instead of being echoed back.
  */
-function showPreview(document_) {
+function showPreview(document_, fromFile = true) {
   pendingImport = document_;
+
+  const source = fromFile ? document_.source || "" : t("bench.pastedText");
 
   const rows = document_.configurations
     .map(
       (config) => `
         <div class="bench-preview-row">
-          <span class="bench-preview-name">${escapeHtml(config.name)}</span>
-          <span class="bench-preview-options">${escapeHtml(
+          <span class="bench-preview-name" dir="ltr">${escapeHtml(config.name)}</span>
+          <span class="bench-preview-options" dir="ltr">${escapeHtml(
             Object.entries(config.options)
               .map(([key, value]) => `${key}=${Array.isArray(value) ? value.join("|") : value}`)
               .join("  ")
@@ -390,30 +396,38 @@ function showPreview(document_) {
   const extras = [];
 
   if (document_.model) {
-    extras.push(`model "${document_.model}"`);
+    extras.push(t("bench.extraModel", { model: document_.model }));
   }
 
   if (document_.prompts.length > 0) {
-    extras.push(`${document_.prompts.length} prompt${document_.prompts.length === 1 ? "" : "s"}`);
+    extras.push(
+      tn(document_.prompts.length, "bench.extraPrompt", "bench.extraPrompts")
+    );
   }
 
   const note = extras.length
-    ? `<span class="bench-preview-source">also carries ${escapeHtml(extras.join(" and "))}</span>`
+    ? `<span class="bench-preview-source">${escapeHtml(
+        t("bench.alsoCarries", { extras: extras.join(t("bench.and")) })
+      )}</span>`
     : "";
 
   previewEl.classList.remove("is-hidden", "is-bad");
   previewEl.innerHTML = `
     <div class="bench-preview-head">
-      <span class="bench-preview-title">
-        ${document_.configurations.length} configuration${document_.configurations.length === 1 ? "" : "s"} found
-      </span>
-      <span class="bench-preview-source">${escapeHtml(document_.source || "")}</span>
+      <span class="bench-preview-title">${escapeHtml(
+        tn(document_.configurations.length, "bench.foundConfig", "bench.foundConfigs")
+      )}</span>
+      <span class="bench-preview-source">${escapeHtml(source)}</span>
       ${note}
     </div>
     <div class="bench-preview-list">${rows}</div>
     <div class="bench-preview-foot">
-      <button type="button" class="btn btn-sm" data-import-act="replace">Replace existing</button>
-      <button type="button" class="btn btn-sm btn-primary" data-import-act="append">Add to list</button>
+      <button type="button" class="btn btn-sm" data-import-act="replace">${escapeHtml(
+        t("bench.replaceExisting")
+      )}</button>
+      <button type="button" class="btn btn-sm btn-primary" data-import-act="append">${escapeHtml(
+        t("bench.addToList")
+      )}</button>
     </div>`;
 }
 
@@ -443,13 +457,13 @@ async function checkPastedText() {
   const text = pasteEl.value.trim();
 
   if (!text) {
-    showPreviewError("Paste a configuration first.");
+    showPreviewError(t("bench.pasteFirst"));
     return;
   }
 
   try {
     const { data } = await postJson("/api/benchmark/parse", { text });
-    showPreview(data);
+    showPreview(data, false);
   } catch (error) {
     showPreviewError(error.message);
   }
@@ -471,7 +485,7 @@ function applyImport(mode) {
     toggleEditor(false);
   }
 
-  const added = addConfigurations(pendingImport.configurations);
+  addConfigurations(pendingImport.configurations);
 
   // A file may describe a whole setup, not just configurations. Those fields are
   // only taken when the user has not already filled them in themselves.
@@ -489,8 +503,8 @@ function applyImport(mode) {
 
   toast(
     "success",
-    mode === "replace" ? "Configurations replaced" : "Configurations added",
-    `${added} configuration${added === 1 ? "" : "s"} now in the comparison.`
+    t(mode === "replace" ? "bench.configsReplaced" : "bench.configsAdded"),
+    t("bench.nowInComparison", { n: getConfigurations().length })
   );
 
   renderSetup();
@@ -573,9 +587,9 @@ async function exportSetup() {
     link.click();
     URL.revokeObjectURL(url);
 
-    toast("success", "Setup exported", "benchmark-configurations.json");
+    toast("success", t("bench.exported"), "benchmark-configurations.json");
   } catch (error) {
-    toast("error", "Export failed", error.message);
+    toast("error", t("bench.exportFailed"), error.message);
   } finally {
     restore();
   }
@@ -601,14 +615,19 @@ function renderProgress(job) {
   progressEl.classList.remove("is-hidden");
   progressEl.innerHTML = `
     <span class="spinner"></span>
-    <span class="bench-progress-text">
-      Running ${job.planned_runs} generation${job.planned_runs === 1 ? "" : "s"} across
-      ${job.configurations.length} configuration${job.configurations.length === 1 ? "" : "s"}
-      on ${escapeHtml(job.model)}.
-    </span>
-    <span class="bench-progress-meta">
-      started ${escapeHtml(job.started_at)} · ${Math.round(job.elapsed_seconds)}s elapsed
-    </span>`;
+    <span class="bench-progress-text">${escapeHtml(
+      t("bench.progressText", {
+        runs: job.planned_runs,
+        configs: job.configurations.length,
+        model: job.model,
+      })
+    )}</span>
+    <span class="bench-progress-meta">${escapeHtml(
+      t("bench.progressMeta", {
+        time: job.started_at,
+        seconds: Math.round(job.elapsed_seconds),
+      })
+    )}</span>`;
 }
 
 /**
@@ -647,7 +666,7 @@ function applyJob(job) {
   if (job.status === "running") {
     setRunning(true);
     renderProgress(job);
-    metaEl.textContent = `Running since ${job.started_at}`;
+    metaEl.textContent = t("bench.runningSince", { time: job.started_at });
     return;
   }
 
@@ -655,15 +674,15 @@ function applyJob(job) {
   renderProgress(null);
 
   if (job.status === "failed") {
-    showAlert(errorEl, `The comparison failed — ${job.error}`);
-    resultsEl.innerHTML = `<div class="empty-state">The comparison did not finish.</div>`;
-    metaEl.textContent = `Failed at ${job.finished_at || ""}`;
+    showAlert(errorEl, t("bench.comparisonFailed", { error: job.error }));
+    resultsEl.innerHTML = `<div class="empty-state">${escapeHtml(t("bench.didNotFinish"))}</div>`;
+    metaEl.textContent = t("bench.failedAt", { time: job.finished_at || "" });
     return;
   }
 
   hideAlert(errorEl);
   renderResults(resultsEl, job);
-  metaEl.textContent = `Finished ${job.finished_at || ""}`;
+  metaEl.textContent = t("bench.finishedAt", { time: job.finished_at || "" });
 
   const discard = document.getElementById("btn-bench-discard");
 
@@ -672,11 +691,11 @@ function applyJob(job) {
       try {
         await postJson("/api/benchmark/clear", {});
       } catch (error) {
-        toast("error", "Could not discard", error.message);
+        toast("error", t("bench.cannotDiscard"), error.message);
         return;
       }
 
-      resultsEl.innerHTML = `<div class="empty-state">No comparison has been run yet.</div>`;
+      resultsEl.innerHTML = `<div class="empty-state">${escapeHtml(t("bench.noRunYet"))}</div>`;
       metaEl.textContent = "";
     });
   }
@@ -694,7 +713,7 @@ function startPolling() {
     } catch (error) {
       // A failed poll says nothing about the run itself, so keep polling and let
       // the alert explain the gap.
-      showAlert(errorEl, `Lost track of the comparison — ${error.message}`);
+      showAlert(errorEl, t("bench.lostTrack", { error: error.message }));
       return;
     }
 
@@ -706,9 +725,13 @@ function startPolling() {
       pollTimer = null;
 
       if (job && job.status === "done") {
-        toast("success", "Comparison finished", `${job.result.tests.length} configurations compared.`);
+        toast(
+          "success",
+          t("bench.finished"),
+          t("bench.finishedBody", { n: job.result.tests.length })
+        );
       } else if (job && job.status === "failed") {
-        toast("error", "Comparison failed", job.error);
+        toast("error", t("bench.failed"), job.error);
       }
     }
   }, POLL_INTERVAL_MS);
@@ -728,18 +751,20 @@ function bindRun() {
       });
 
       hideAlert(errorEl);
-      resultsEl.innerHTML = `<div class="empty-state">The comparison is running…</div>`;
+      resultsEl.innerHTML = `<div class="empty-state">${escapeHtml(
+        t("bench.runningPlaceholder")
+      )}</div>`;
       applyJob(data);
       startPolling();
 
       toast(
         "pending",
-        "Comparison started",
-        `${data.planned_runs} generations queued. This page keeps working while it runs.`
+        t("bench.started"),
+        t("bench.startedBody", { n: data.planned_runs })
       ).dismiss();
     } catch (error) {
-      showAlert(errorEl, `Could not start the comparison — ${error.message}`);
-      toast("error", "Could not start", error.message);
+      showAlert(errorEl, t("bench.cannotStartAlert", { error: error.message }));
+      toast("error", t("bench.cannotStart"), error.message);
     } finally {
       restore();
       updateRunState();
@@ -780,7 +805,7 @@ export async function initBenchmarkPanel() {
     const { data } = await api("/api/benchmark/schema");
     buildEditor(data.options);
   } catch (error) {
-    showAlert(errorEl, `Could not load the configuration options — ${error.message}`);
+    showAlert(errorEl, t("bench.optionsFailed", { error: error.message }));
   }
 
   // A reload during a run must not lose it: the job lives on the server, so pick
@@ -793,6 +818,6 @@ export async function initBenchmarkPanel() {
       startPolling();
     }
   } catch (error) {
-    showAlert(errorEl, `Could not read the comparison status — ${error.message}`);
+    showAlert(errorEl, t("bench.statusFailed", { error: error.message }));
   }
 }

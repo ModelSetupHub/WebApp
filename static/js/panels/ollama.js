@@ -11,6 +11,7 @@ import {
   specRows,
   stateValue,
 } from "../lib/format.js";
+import { t } from "../lib/i18n.js";
 import { getOllamaStatus, setOllamaStatus } from "../lib/state.js";
 import { setButtonBusy, toast } from "../lib/toast.js";
 import { loadModels } from "./models.js";
@@ -31,42 +32,44 @@ const serverNoteEl = document.getElementById("server-note");
 function renderStatus(data) {
   document.getElementById("ollama-cards").innerHTML = `
     <div class="card">
-      <div class="card-label">Installed</div>
-      ${stateValue(data.installed, data.installed ? "yes" : "no")}
-      <div class="card-sub">${data.installed ? "binary found on PATH" : "ollama binary not found"}</div>
+      <div class="card-label">${escapeHtml(t("ollama.cardInstalled"))}</div>
+      ${stateValue(data.installed, t(data.installed ? "value.yes" : "value.no"))}
+      <div class="card-sub">${escapeHtml(
+        t(data.installed ? "ollama.cardInstalledYes" : "ollama.cardInstalledNo")
+      )}</div>
     </div>
     <div class="card">
-      <div class="card-label">Server</div>
-      ${stateValue(data.running, data.running ? "running" : "stopped")}
-      <div class="card-sub">local API on port 11434</div>
+      <div class="card-label">${escapeHtml(t("ollama.cardServer"))}</div>
+      ${stateValue(data.running, t(data.running ? "value.running" : "value.stopped"))}
+      <div class="card-sub">${escapeHtml(t("ollama.cardServerSub"))}</div>
     </div>
     <div class="card">
-      <div class="card-label">Version</div>
-      <div class="card-value">${escapeHtml(fmt(data.version))}</div>
-      <div class="card-sub">reported by the ollama binary</div>
+      <div class="card-label">${escapeHtml(t("ollama.cardVersion"))}</div>
+      <div class="card-value" dir="ltr">${escapeHtml(fmt(data.version))}</div>
+      <div class="card-sub">${escapeHtml(t("ollama.cardVersionSub"))}</div>
     </div>
   `;
 
   document.getElementById("ollama-specs").innerHTML = specRows([
-    ["Installed", data.installed ? "yes" : "no"],
-    ["Server running", data.running ? "yes" : "no"],
-    ["Version", data.version],
+    [t("ollama.specInstalled"), t(data.installed ? "value.yes" : "value.no")],
+    [t("ollama.specServerRunning"), t(data.running ? "value.yes" : "value.no")],
+    [t("ollama.specVersion"), data.version],
   ]);
 
   if (!data.installed) {
     serverStateEl.className = "control-title is-bad";
-    serverStateEl.textContent = "Ollama is not installed";
-    serverNoteEl.textContent = "Run an installer below before starting the server.";
+    serverStateEl.textContent = t("ollama.notInstalled");
+    serverNoteEl.textContent = t("ollama.notInstalledNote");
     startBtn.disabled = true;
     stopBtn.disabled = true;
     return;
   }
 
   serverStateEl.className = `control-title ${data.running ? "is-good" : "is-bad"}`;
-  serverStateEl.textContent = data.running ? "Server is running" : "Server is stopped";
-  serverNoteEl.textContent = data.running
-    ? "Models can be listed, loaded and run."
-    : "Start the server before using any model action.";
+  serverStateEl.textContent = t(data.running ? "ollama.serverUp" : "ollama.serverDown");
+  serverNoteEl.textContent = t(
+    data.running ? "ollama.serverUpNote" : "ollama.serverDownNote"
+  );
 
   startBtn.disabled = data.running;
   stopBtn.disabled = !data.running;
@@ -98,10 +101,12 @@ export async function loadOllamaStatus({ quiet = false } = {}) {
     setOllamaStatus(data);
     hideAlert(ollamaErrorEl);
     renderStatus(data);
-    ollamaMetaEl.textContent = `Checked ${new Date().toLocaleTimeString()}`;
+    ollamaMetaEl.textContent = t("ollama.checkedAt", {
+      time: new Date().toLocaleTimeString(),
+    });
   } catch (error) {
     setOllamaStatus(null);
-    showAlert(ollamaErrorEl, `Could not read Ollama status — ${error.message}`);
+    showAlert(ollamaErrorEl, t("ollama.statusFailed", { error: error.message }));
     document.getElementById("ollama-cards").innerHTML = "";
     document.getElementById("ollama-specs").innerHTML = "";
     ollamaMetaEl.textContent = "";
@@ -116,7 +121,7 @@ function bindStart() {
   startBtn.addEventListener("click", async () => {
     await runAction(
       "runtime.start()",
-      "Starting Ollama",
+      t("ollama.starting"),
       () => postJson("/api/ollama/start", {}),
       {
         button: startBtn,
@@ -124,7 +129,9 @@ function bindStart() {
         onSuccess: (res) => {
           setOllamaStatus(res.data);
           loadModels({ quiet: true });
-          return `Server running, version ${res.data.version || "unknown"}.`;
+          return t("ollama.startedBody", {
+            version: res.data.version || t("value.unknown"),
+          });
         },
       }
     );
@@ -137,13 +144,13 @@ function bindStart() {
 function bindStop() {
   stopBtn.addEventListener("click", async () => {
     // Stopping kills the process, which drops any loaded model, so confirm.
-    if (!window.confirm("Stop the Ollama server? Any model held in memory will be unloaded.")) {
+    if (!window.confirm(t("ollama.stopConfirm"))) {
       return;
     }
 
     await runAction(
       "runtime.stop()",
-      "Stopping Ollama",
+      t("ollama.stopping"),
       () => postJson("/api/ollama/stop", {}),
       {
         button: stopBtn,
@@ -154,9 +161,7 @@ function bindStop() {
 
           // The Ollama desktop app supervises the server and respawns it, so a
           // successful kill can still leave the API reachable.
-          return res.restarted
-            ? "The server process was terminated but the Ollama desktop app restarted it. Quit Ollama from the system tray to keep it stopped."
-            : "Server stopped.";
+          return t(res.restarted ? "ollama.respawned" : "ollama.stoppedBody");
         },
       }
     );
@@ -173,13 +178,13 @@ function bindInstallForm() {
     const button = form.querySelector('button[type="submit"]');
 
     if (!path) {
-      toast("error", "Cannot install", "Enter the path to an Ollama installer.");
+      toast("error", t("ollama.cannotInstall"), t("ollama.cannotInstallBody"));
       return;
     }
 
     await runAction(
       "runtime.install()",
-      "Running installer",
+      t("ollama.installing"),
       () => postJson("/api/ollama/install", { installer_path: path }),
       {
         button,
@@ -187,8 +192,10 @@ function bindInstallForm() {
         onSuccess: (res) => {
           setOllamaStatus(res.data);
           return res.data.installed
-            ? `Ollama installed, version ${res.data.version || "unknown"}.`
-            : "The installer finished but no ollama binary was found on PATH yet.";
+            ? t("ollama.installedBody", {
+                version: res.data.version || t("value.unknown"),
+              })
+            : t("ollama.installedNoBinary");
         },
       }
     );

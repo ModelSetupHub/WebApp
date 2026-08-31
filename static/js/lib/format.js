@@ -33,6 +33,21 @@ export function escapeHtml(value) {
 }
 
 /**
+ * Wrap a value that must read left to right regardless of interface language.
+ *
+ * Model tags, file paths, version strings and measurements are Latin-script and
+ * would be reordered by the surrounding right-to-left context — a value like
+ * "1.18 s" can end up rendering as "s 1.18". Isolating it keeps it intact
+ * without forcing the whole row into one direction.
+ *
+ * @param {*} value Value to display.
+ * @returns {string} Escaped HTML with a direction isolate.
+ */
+export function ltr(value) {
+  return `<span class="is-ltr" dir="ltr">${escapeHtml(value)}</span>`;
+}
+
+/**
  * Build key/value rows for a spec table.
  *
  * @param {Array<[string, *]>} rows Label and value pairs.
@@ -43,10 +58,12 @@ export function specRows(rows) {
     .map(([label, value]) => {
       const text = fmt(value);
       const unknown = text === "—" ? " is-unknown" : "";
+      // Spec values are hardware strings and measurements — Latin script and
+      // digits — so they are isolated rather than reordered by an RTL page.
       return `
         <div class="spec-row">
           <span class="spec-key">${escapeHtml(label)}</span>
-          <span class="spec-val${unknown}">${escapeHtml(text)}</span>
+          <span class="spec-val${unknown}" dir="ltr">${escapeHtml(text)}</span>
         </div>`;
     })
     .join("");

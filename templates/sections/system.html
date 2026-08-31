@@ -2,13 +2,15 @@
 <section id="system" class="panel-section is-visible" aria-labelledby="system-title">
   <header class="section-head">
     <div class="section-heading">
-      <h1 id="system-title">System</h1>
-      <p class="section-note">Hardware and software profile reported by the core scanner.</p>
+      <h1 id="system-title" data-i18n="system.title">System</h1>
+      <p class="section-note" data-i18n="system.note">
+        Hardware and software profile reported by the core scanner.
+      </p>
     </div>
 
     <div class="section-actions">
       <span class="scan-meta" id="scan-meta" aria-live="polite"></span>
-      <button type="button" class="btn" id="btn-rescan">Rescan</button>
+      <button type="button" class="btn" id="btn-rescan" data-i18n="btn.rescan">Rescan</button>
     </div>
   </header>
 
@@ -17,42 +19,42 @@
   <div class="card-grid" id="system-cards"></div>
 
   <div class="subsection">
-    <h2 class="subsection-title">Software</h2>
+    <h2 class="subsection-title" data-i18n="system.software">Software</h2>
     <div class="group-grid">
       <div class="spec-group">
-        <h3 class="spec-group-title">Operating system</h3>
+        <h3 class="spec-group-title" data-i18n="system.os">Operating system</h3>
         <div class="spec-table" id="software-specs"></div>
       </div>
       <div class="spec-group">
-        <h3 class="spec-group-title">Runtime</h3>
+        <h3 class="spec-group-title" data-i18n="system.runtime">Runtime</h3>
         <div class="spec-table" id="runtime-specs"></div>
       </div>
     </div>
   </div>
 
   <div class="subsection">
-    <h2 class="subsection-title">Hardware</h2>
+    <h2 class="subsection-title" data-i18n="system.hardware">Hardware</h2>
 
     <div class="group-stack">
       <div class="spec-group">
-        <h3 class="spec-group-title">Processor</h3>
+        <h3 class="spec-group-title" data-i18n="system.processor">Processor</h3>
         <div class="spec-table is-split" id="cpu-specs"></div>
       </div>
 
       <div class="spec-group">
-        <h3 class="spec-group-title">Memory</h3>
+        <h3 class="spec-group-title" data-i18n="system.memory">Memory</h3>
         <div class="spec-table is-split" id="memory-specs"></div>
         <div class="tile-list" id="memory-modules"></div>
       </div>
 
       <div class="spec-group">
-        <h3 class="spec-group-title">Graphics</h3>
+        <h3 class="spec-group-title" data-i18n="system.graphics">Graphics</h3>
         <div class="spec-table is-split" id="gpu-specs"></div>
         <div class="tile-list" id="gpu-devices"></div>
       </div>
 
       <div class="spec-group">
-        <h3 class="spec-group-title">Storage</h3>
+        <h3 class="spec-group-title" data-i18n="system.storage">Storage</h3>
         <div class="tile-list" id="storage-drives"></div>
       </div>
     </div>

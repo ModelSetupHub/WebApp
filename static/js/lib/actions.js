@@ -2,6 +2,7 @@
 // toast, and a busy state on the button that triggered it.
 
 import { writeConsole, writeConsolePending } from "./console.js";
+import { t } from "./i18n.js";
 import { setButtonBusy, toast } from "./toast.js";
 
 // Panels register a reload here rather than being imported directly, which
@@ -30,14 +31,18 @@ export function setRefreshHook(hook) {
 export async function runAction(call, label, work, { onSuccess, refresh = true, button } = {}) {
   writeConsolePending(call);
   const restoreButton = setButtonBusy(button);
-  const pending = toast("pending", `${label}…`, "Working, this can take a moment.");
+  const pending = toast("pending", t("action.pending", { label }), t("action.pendingBody"));
 
   try {
     const result = await work();
     const message = onSuccess ? onSuccess(result) : result.data;
 
     writeConsole(call, message);
-    pending.settle("success", `${label} — done`, String(message ?? "").trim().slice(0, 200));
+    pending.settle(
+      "success",
+      t("action.done", { label }),
+      String(message ?? "").trim().slice(0, 200)
+    );
 
     if (refresh) {
       await refreshHook();
@@ -46,7 +51,7 @@ export async function runAction(call, label, work, { onSuccess, refresh = true, 
     return true;
   } catch (error) {
     writeConsole(call, error.message, { isError: true });
-    pending.settle("error", `${label} — failed`, error.message);
+    pending.settle("error", t("action.failed", { label }), error.message);
     return false;
   } finally {
     restoreButton();

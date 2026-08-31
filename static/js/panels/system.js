@@ -1,6 +1,7 @@
 // System tab controller: load the profile and drive the Rescan button.
 
 import { hideAlert, showAlert, skeletons } from "../lib/format.js";
+import { t } from "../lib/i18n.js";
 import { setButtonBusy, toast } from "../lib/toast.js";
 import {
   renderCpu,
@@ -48,9 +49,9 @@ function clearPanels() {
 }
 
 function showError(message) {
-  showAlert(systemErrorEl, `System scan failed — ${message}`);
+  showAlert(systemErrorEl, t("system.scanFailed", { error: message }));
   clearPanels();
-  setHostStatus("offline", "scan failed");
+  setHostStatus("offline", t("host.scanFailed"));
 }
 
 /**
@@ -63,7 +64,7 @@ function showError(message) {
  */
 export async function loadSystem({ refresh = false } = {}) {
   const restore = setButtonBusy(rescanBtn);
-  scanMetaEl.textContent = refresh ? "Rescanning…" : "Scanning…";
+  scanMetaEl.textContent = refresh ? t("system.rescanning") : t("system.scanning");
   document.getElementById("system-cards").innerHTML = skeletons(4);
 
   try {
@@ -72,7 +73,7 @@ export async function loadSystem({ refresh = false } = {}) {
 
     if (!data.ok) {
       scanMetaEl.textContent = "";
-      showError(data.error || "unknown error");
+      showError(data.error || t("value.unknown"));
       return;
     }
 
@@ -86,16 +87,19 @@ export async function loadSystem({ refresh = false } = {}) {
     renderGpu(profile);
     renderStorage(profile);
 
-    scanMetaEl.textContent = `Scanned ${data.scanned_at}${data.cached ? " (cached)" : ""}`;
-    setHostStatus("online", (profile.system || {}).name || "host online");
+    scanMetaEl.textContent = t(
+      data.cached ? "system.scannedAtCached" : "system.scannedAt",
+      { time: data.scanned_at }
+    );
+    setHostStatus("online", (profile.system || {}).name || t("host.online"));
 
     if (refresh) {
-      toast("success", "System rescanned", "Hardware profile refreshed.");
+      toast("success", t("system.rescanned"), t("system.rescannedBody"));
     }
   } catch (error) {
     scanMetaEl.textContent = "";
     showError(error.message);
-    toast("error", "System scan failed", error.message);
+    toast("error", t("system.rescanned"), error.message);
   } finally {
     restore();
   }
