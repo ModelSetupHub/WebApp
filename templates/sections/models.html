@@ -2,13 +2,15 @@
 <section id="models" class="panel-section" aria-labelledby="models-title">
   <header class="section-head">
     <div class="section-heading">
-      <h1 id="models-title">Models</h1>
-      <p class="section-note">Installed and running Ollama models, and every action core exposes for them.</p>
+      <h1 id="models-title" data-i18n="models.title">Models</h1>
+      <p class="section-note" data-i18n="models.note">
+        Installed and running Ollama models, and every action core exposes for them.
+      </p>
     </div>
 
     <div class="section-actions">
       <span class="scan-meta" id="models-meta" aria-live="polite"></span>
-      <button type="button" class="btn" id="btn-refresh-models">Refresh</button>
+      <button type="button" class="btn" id="btn-refresh-models" data-i18n="btn.refresh">Refresh</button>
     </div>
   </header>
 
@@ -17,28 +19,28 @@
   <div class="card-grid" id="models-cards"></div>
 
   <div class="subsection">
-    <h2 class="subsection-title">Running models</h2>
+    <h2 class="subsection-title" data-i18n="models.runningTitle">Running models</h2>
     <p class="hint">list_running_models</p>
     <div id="running-table"></div>
   </div>
 
   <div class="subsection">
-    <h2 class="subsection-title">Installed models</h2>
+    <h2 class="subsection-title" data-i18n="models.installedTitle">Installed models</h2>
     <p class="hint">list_models · show_model_info · load_model · stop_model · remove_model</p>
     <div id="models-table"></div>
   </div>
 
   <div class="subsection">
-    <h2 class="subsection-title">Actions</h2>
+    <h2 class="subsection-title" data-i18n="models.actionsTitle">Actions</h2>
     <div class="group-grid">
       {% include "sections/models_forms.html" %}
     </div>
   </div>
 
   <div class="subsection">
-    <h2 class="subsection-title">Output</h2>
+    <h2 class="subsection-title" data-i18n="models.outputTitle">Output</h2>
     <div class="console" id="console">
-      <div class="empty-state">No action run yet.</div>
+      <div class="empty-state" data-i18n="models.noActionYet">No action run yet.</div>
     </div>
   </div>
 </section>

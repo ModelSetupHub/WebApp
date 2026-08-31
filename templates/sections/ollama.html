@@ -2,13 +2,15 @@
 <section id="ollama" class="panel-section" aria-labelledby="ollama-title">
   <header class="section-head">
     <div class="section-heading">
-      <h1 id="ollama-title">Ollama</h1>
-      <p class="section-note">Installation state and the local server process.</p>
+      <h1 id="ollama-title" data-i18n="ollama.title">Ollama</h1>
+      <p class="section-note" data-i18n="ollama.note">
+        Installation state and the local server process.
+      </p>
     </div>
 
     <div class="section-actions">
       <span class="scan-meta" id="ollama-meta" aria-live="polite"></span>
-      <button type="button" class="btn" id="btn-refresh-status">Refresh</button>
+      <button type="button" class="btn" id="btn-refresh-status" data-i18n="btn.refresh">Refresh</button>
     </div>
   </header>
 
@@ -17,46 +19,47 @@
   <div class="card-grid" id="ollama-cards"></div>
 
   <div class="subsection">
-    <h2 class="subsection-title">Process control</h2>
+    <h2 class="subsection-title" data-i18n="ollama.processControl">Process control</h2>
     <p class="hint">start · stop</p>
 
     <div class="control-bar">
       <div class="control-text">
-        <span class="control-title" id="server-state">Checking the server…</span>
+        <span class="control-title" id="server-state" data-i18n="ollama.checking">
+          Checking the server…
+        </span>
         <span class="control-note" id="server-note"></span>
       </div>
 
       <div class="btn-row btn-row-wide">
-        <button type="button" class="btn btn-primary" id="btn-start-ollama">Start</button>
-        <button type="button" class="btn btn-danger" id="btn-stop-ollama">Stop</button>
+        <button type="button" class="btn btn-primary" id="btn-start-ollama" data-i18n="btn.start">Start</button>
+        <button type="button" class="btn btn-danger" id="btn-stop-ollama" data-i18n="btn.stop">Stop</button>
       </div>
     </div>
   </div>
 
   <div class="subsection">
-    <h2 class="subsection-title">Runtime</h2>
+    <h2 class="subsection-title" data-i18n="system.runtime">Runtime</h2>
     <div class="spec-table is-split" id="ollama-specs"></div>
   </div>
 
   <div class="subsection">
-    <h2 class="subsection-title">Installation</h2>
+    <h2 class="subsection-title" data-i18n="ollama.installation">Installation</h2>
     <p class="hint">install</p>
 
     <form class="panel-form" id="form-install" novalidate>
-      <h3 class="form-title">Run an Ollama installer</h3>
+      <h3 class="form-title" data-i18n="ollama.installFormTitle">Run an Ollama installer</h3>
 
       <label class="field">
-        <span class="field-label">Installer path</span>
-        <input class="input" name="installer_path" placeholder="D:\downloads\OllamaSetup.exe">
-        <span class="field-hint">
-          Absolute path to an installer already downloaded on this machine. The
-          installer runs with its own interface, which may ask for elevation and
-          may need to be completed outside this page.
+        <span class="field-label" data-i18n="ollama.installerPath">Installer path</span>
+        <input class="input is-ltr" name="installer_path" dir="ltr"
+               placeholder="D:\downloads\OllamaSetup.exe">
+        <span class="field-hint" data-i18n="ollama.installerHint">
+          Absolute path to an installer already downloaded on this machine.
         </span>
       </label>
 
       <div class="form-foot">
-        <button type="submit" class="btn btn-primary">Run installer</button>
+        <button type="submit" class="btn btn-primary" data-i18n="ollama.runInstaller">Run installer</button>
       </div>
     </form>
   </div>

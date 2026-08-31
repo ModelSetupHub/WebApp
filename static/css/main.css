@@ -21,3 +21,6 @@
 @import url("components/benchmark.css");
 
 @import url("base/responsive.css");
+/* Last, so its direction corrections override the physical sides declared by
+   every component above. */
+@import url("base/rtl.css");

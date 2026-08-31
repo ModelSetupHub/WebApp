@@ -1,0 +1,195 @@
+/* ---------- Right-to-left and language typography ----------
+
+   Two separate jobs live here.
+
+   First, typography: Inter has no Persian glyphs, so Persian text would fall
+   back to whatever the OS picks. Vazirmatn is loaded alongside it and put first
+   in the stack for the Persian document, while JetBrains Mono stays as-is —
+   every monospace value in this app is Latin script or digits.
+
+   Second, direction. Most of the layout already survives a direction flip
+   because it is built from flexbox, grid and logical gaps. What does not survive
+   is anything that names a physical side, and anything holding a Latin-script
+   value that the bidirectional algorithm would reorder. The first group is
+   corrected below; the second is handled by .is-ltr and dir="ltr" on the
+   elements themselves, since the correct direction is a property of the content
+   rather than of the page. */
+
+html[lang="fa"] body {
+  font-family: 'Vazirmatn', 'Inter', sans-serif;
+}
+
+/* Persian digits are not used: every number here is a measurement, a token
+   count or a model parameter, and mixing digit systems in a table of figures
+   makes them harder to compare, not easier to read. */
+html[lang="fa"] {
+  font-variant-numeric: normal;
+}
+
+/* Any element carrying Latin-script content inside a Persian page. The isolate
+   keeps a value like "1.18 s" or "qwen3vl:latest" from being reordered by the
+   surrounding right-to-left run. */
+.is-ltr {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+/* Text inputs holding paths, model tags and JSON stay left-aligned even when
+   the label beside them reads right to left. */
+html[dir="rtl"] .input.is-ltr,
+html[dir="rtl"] input[dir="ltr"],
+html[dir="rtl"] textarea[dir="ltr"] {
+  text-align: left;
+}
+
+/* ---------- Direction-sensitive components ---------- */
+
+/* The select arrow is drawn with a background position measured from one edge,
+   which does not follow direction on its own. */
+html[dir="rtl"] select.input {
+  background-position: 16px 52%, 21px 52%;
+  padding-right: 10px;
+  padding-left: 30px;
+}
+
+/* Spec rows put the label and its value at opposite ends; the value's own
+   alignment has to flip with them. */
+html[dir="rtl"] .spec-val {
+  text-align: left;
+}
+
+/* Row action buttons are pushed to the far edge of the table, which is the left
+   edge once the table reads right to left. */
+html[dir="rtl"] .data-table .cell-actions {
+  text-align: left;
+}
+
+/* Numeric table columns keep their digits grouped at the edge nearest the
+   column header in both directions. */
+html[dir="rtl"] .bench-table td.is-number,
+html[dir="rtl"] .bench-table th.is-number {
+  text-align: left;
+}
+
+/* The colour swatch that ties a results row to its configuration card sits
+   before the name, so its margin has to follow the text direction. */
+.bench-table .cell-config::before {
+  margin-right: 8px;
+  margin-left: 0;
+}
+
+html[dir="rtl"] .bench-table .cell-config::before {
+  margin-right: 0;
+  margin-left: 8px;
+}
+
+/* Bar values are read against the bar below them; in a right-to-left page the
+   value belongs on the left, where the bar now starts. */
+html[dir="rtl"] .bench-bar-value {
+  text-align: left;
+}
+
+/* Per-prompt stats and outputs are indented past the "#1" marker, which moves
+   to the other side with the text. */
+html[dir="rtl"] .bench-prompt-stats,
+html[dir="rtl"] .bench-output,
+html[dir="rtl"] .bench-prompt-error {
+  padding-left: 0;
+  padding-right: 26px;
+  margin-left: 0;
+  margin-right: 26px;
+}
+
+/* Generated model output is the model's own text and may be either language, so
+   it is left to the page direction rather than forced — but its own paragraph
+   direction is set per block by the browser's heuristic. */
+html[dir="rtl"] .bench-output {
+  unicode-bidi: plaintext;
+}
+
+/* Toasts stack in a fixed corner; the corner should be the one nearest where
+   the eye already is, which flips with the reading direction. */
+html[dir="rtl"] .toast-stack {
+  right: auto;
+  left: 18px;
+}
+
+html[dir="rtl"] .toast {
+  border-left: 1px solid var(--border-strong);
+  border-right: 3px solid var(--text-faint);
+}
+
+html[dir="rtl"] .toast.is-pending { border-right-color: var(--accent-blue); }
+html[dir="rtl"] .toast.is-success { border-right-color: var(--accent-green); }
+html[dir="rtl"] .toast.is-error { border-right-color: var(--accent-red); }
+
+/* The accent stripe on cards and detail panels marks the start of the block. */
+html[dir="rtl"] .card::before,
+html[dir="rtl"] .bench-config::before {
+  inset: 0 0 0 auto;
+}
+
+html[dir="rtl"] .bench-verdict {
+  border-left: 1px solid var(--border-soft);
+  border-right: 3px solid var(--accent-green);
+}
+
+html[dir="rtl"] .bench-verdict.is-empty {
+  border-right-color: var(--accent-red);
+}
+
+html[dir="rtl"] .bench-detail-head {
+  border-left: none;
+  border-right: 3px solid var(--series-color, var(--accent-blue));
+}
+
+html[dir="rtl"] .bench-progress {
+  border-left: 1px solid var(--accent-blue-dim);
+  border-right: 3px solid var(--accent-blue);
+}
+
+/* The caret rotates towards the content it opens, which is the other way round
+   when the panel reads right to left. */
+html[dir="rtl"] .bench-group-caret {
+  transform: rotate(180deg);
+}
+
+html[dir="rtl"] .bench-group.is-open .bench-group-caret,
+html[dir="rtl"] .bench-detail.is-open .bench-group-caret {
+  transform: rotate(90deg);
+}
+
+/* The subsection title rule and the hint indent under it are both anchored to
+   the start of the line. */
+html[dir="rtl"] .hint {
+  margin-left: 0;
+  margin-right: 23px;
+}
+
+/* A set option is marked on the edge where its field begins. */
+html[dir="rtl"] .bench-option {
+  padding-left: 0;
+  padding-right: 9px;
+}
+
+html[dir="rtl"] .bench-option::before {
+  inset: 2px 0 2px auto;
+}
+
+/* Meta text pinned to the far end of a header row. */
+html[dir="rtl"] .console-time,
+html[dir="rtl"] .bench-group-badge,
+html[dir="rtl"] .bench-detail-meta,
+html[dir="rtl"] .bench-progress-meta,
+html[dir="rtl"] .sidebar-foot {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+/* Console output is a CLI transcript: aligned columns only survive if it reads
+   left to right, whatever the interface language is. */
+.console-body {
+  direction: ltr;
+  text-align: left;
+  unicode-bidi: isolate;
+}
