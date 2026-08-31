@@ -43,7 +43,17 @@
   gap: 22px;
 }
 
-.spec-group { min-width: 0; }
+.spec-group {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Two side-by-side groups with different row counts would otherwise end at
+   different heights, which reads as a broken layout rather than a shorter
+   table. Stretching the panel fills its column, so both blocks share one
+   bottom edge while the rows stay at the top. */
+.spec-group .spec-table { flex: 1; }
 
 .spec-group-title {
   font-size: 12px;
