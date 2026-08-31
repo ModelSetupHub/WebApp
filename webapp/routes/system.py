@@ -1,4 +1,4 @@
-"""API routes for the System tab, backed by ``core.System.scanner``."""
+"""API routes for the System tab, backed by ``core.system.scanner``."""
 
 from flask import Blueprint, jsonify, request
 
