@@ -1,23 +1,79 @@
-{# Left navigation, language switch, and host status footer. #}
-<aside class="sidebar">
+{# Left navigation, language switch, and host status footer.
+   Icons are inline SVG so they inherit the active/hover colour. Every row in
+   the rail shares one padding so the icons, brand mark, toggle and status dot
+   all sit on the same vertical line — the collapse animation relies on that:
+   the rail only gets narrower while the labels fade, nothing is re-centred. #}
+<aside class="sidebar" id="sidebar">
   <div class="brand">
-    <span class="brand-mark">◆</span>
+    <span class="brand-mark icon-slot" aria-hidden="true">
+      {# Diamond hub: the brand mark, matching the profile logo concept. #}
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2.8 21.2 12 12 21.2 2.8 12Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+        <path d="M12 7.4 16.6 12 12 16.6 7.4 12Z" fill="currentColor"/>
+      </svg>
+    </span>
     <span class="brand-name">Model Setup Hub</span>
   </div>
 
-  <nav class="nav" data-i18n-aria-label="nav.sections" aria-label="Sections">
+  <nav class="nav" id="sidebar-nav" data-i18n-aria-label="nav.sections" aria-label="Sections">
     <span class="nav-caption" data-i18n="nav.tools">Tools</span>
-    <a href="#system" class="nav-item is-active" data-section="system">
-      <span class="nav-glyph">▤</span> <span data-i18n="nav.system">System</span>
+
+    <a href="#system" class="nav-item is-active" data-section="system"
+       data-i18n-title="nav.system" title="System">
+      <span class="nav-glyph icon-slot" aria-hidden="true">
+        {# Chip: the hardware profile tab. #}
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="6.2" y="6.2" width="11.6" height="11.6" rx="2.2" stroke="currentColor" stroke-width="1.7"/>
+          <rect x="10.1" y="10.1" width="3.8" height="3.8" rx="0.9" stroke="currentColor" stroke-width="1.7"/>
+          <path d="M9.2 3.2v3M14.8 3.2v3M9.2 17.8v3M14.8 17.8v3M3.2 9.2h3M3.2 14.8h3M17.8 9.2h3M17.8 14.8h3"
+                stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <span class="nav-label" data-i18n="nav.system">System</span>
     </a>
-    <a href="#ollama" class="nav-item" data-section="ollama">
-      <span class="nav-glyph">◈</span> <span data-i18n="nav.ollama">Ollama</span>
+
+    <a href="#ollama" class="nav-item" data-section="ollama"
+       data-i18n-title="nav.ollama" title="Ollama">
+      <span class="nav-glyph icon-slot" aria-hidden="true">
+        {# Server stack: the runtime/process tab. #}
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="4" y="4.2" width="16" height="6.6" rx="1.8" stroke="currentColor" stroke-width="1.7"/>
+          <rect x="4" y="13.2" width="16" height="6.6" rx="1.8" stroke="currentColor" stroke-width="1.7"/>
+          <circle cx="7.4" cy="7.5" r="1" fill="currentColor"/>
+          <circle cx="7.4" cy="16.5" r="1" fill="currentColor"/>
+          <path d="M16.4 7.5h1.2M16.4 16.5h1.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <span class="nav-label" data-i18n="nav.ollama">Ollama</span>
     </a>
-    <a href="#models" class="nav-item" data-section="models">
-      <span class="nav-glyph">◇</span> <span data-i18n="nav.models">Models</span>
+
+    <a href="#models" class="nav-item" data-section="models"
+       data-i18n-title="nav.models" title="Models">
+      <span class="nav-glyph icon-slot" aria-hidden="true">
+        {# Cube: installed models on disk. #}
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 3.2 19.8 7.6v8.8L12 20.8 4.2 16.4V7.6L12 3.2Z"
+                stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+          <path d="M4.6 7.8 12 12l7.4-4.2M12 12v8.4"
+                stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      <span class="nav-label" data-i18n="nav.models">Models</span>
     </a>
-    <a href="#benchmark" class="nav-item" data-section="benchmark">
-      <span class="nav-glyph">◎</span> <span data-i18n="nav.benchmark">Benchmark</span>
+
+    <a href="#benchmark" class="nav-item" data-section="benchmark"
+       data-i18n-title="nav.benchmark" title="Benchmark">
+      <span class="nav-glyph icon-slot" aria-hidden="true">
+        {# Bar chart: comparing runs. Bounds are optically centred in the
+           viewBox so the glyph sits level with its neighbours. #}
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M4 18.7h16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+          <rect x="5.6" y="10.5" width="3.6" height="6.6" rx="1" stroke="currentColor" stroke-width="1.7"/>
+          <rect x="10.2" y="5.3" width="3.6" height="11.8" rx="1" stroke="currentColor" stroke-width="1.7"/>
+          <rect x="14.8" y="8.1" width="3.6" height="9" rx="1" stroke="currentColor" stroke-width="1.7"/>
+        </svg>
+      </span>
+      <span class="nav-label" data-i18n="nav.benchmark">Benchmark</span>
     </a>
   </nav>
 
@@ -28,8 +84,19 @@
     <button type="button" class="lang-btn" data-lang="fa" lang="fa">فا</button>
   </div>
 
+  {# Collapse control: a full-width row like a nav item, so its chevron sits on
+     the same column as every other icon and stays there in both states. #}
+  <button type="button" class="sidebar-toggle" id="btn-sidebar-toggle" aria-expanded="true">
+    <span class="icon-slot" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="m12.5 6.5-5.5 5.5 5.5 5.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="m17.5 6.5-5.5 5.5 5.5 5.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </span>
+  </button>
+
   <div class="sidebar-foot">
-    <span class="status-dot" id="host-dot"></span>
+    <span class="icon-slot"><span class="status-dot" id="host-dot"></span></span>
     <span class="host-label" id="host-label" data-i18n="host.connecting">connecting…</span>
   </div>
 </aside>

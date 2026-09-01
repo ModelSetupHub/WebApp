@@ -1,13 +1,13 @@
 /* ---------- Responsive ---------- */
 
 @media (max-width: 900px) {
-  :root { --sidebar-w: 178px; }
+  :root { --sidebar-w: 220px; }
   .group-grid { grid-template-columns: minmax(0, 1fr); }
   .spec-table.is-split { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (max-width: 680px) {
-  .app-shell { grid-template-columns: minmax(0, 1fr); }
+  .app-shell { grid-template-columns: minmax(0, 1fr) !important; }
   .sidebar {
     position: static;
     height: auto;
@@ -15,15 +15,39 @@
     align-items: center;
     gap: 14px;
     padding: 12px 14px;
-    border-right: none;
-    border-bottom: 1px solid var(--border-soft);
+    margin: 10px 10px 0;
+    border-radius: var(--radius);
     overflow-x: auto;
+    overflow-y: hidden;
   }
+  /* Collapsing makes no sense in the horizontal mobile rail. */
+  .sidebar-toggle { display: none; }
   .nav { flex-direction: row; }
   .nav-caption { display: none; }
+  /* Undo the collapsed-rail hiding and centring; the mobile rail is horizontal
+     and always shows labels, whatever the stored state says. */
+  body.sidebar-is-collapsed .brand-name,
+  body.sidebar-is-collapsed .nav-label,
+  body.sidebar-is-collapsed .host-label,
+  body.sidebar-is-collapsed .lang-switch {
+    display: initial;
+    opacity: 1;
+    visibility: visible;
+  }
+  body.sidebar-is-collapsed .brand,
+  body.sidebar-is-collapsed .nav-item,
+  body.sidebar-is-collapsed .sidebar-foot {
+    justify-content: flex-start;
+    padding-inline: 10px;
+  }
+  body.sidebar-is-collapsed .nav-item.is-active {
+    border-inline-start: 2px solid var(--accent-green);
+    box-shadow: none;
+    padding-inline-start: 8px;
+  }
   .sidebar-foot {
     margin-top: 0;
-    margin-left: auto;
+    margin-inline-start: auto;
     border-top: none;
     padding: 0 4px;
   }

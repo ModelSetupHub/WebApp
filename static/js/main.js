@@ -7,6 +7,7 @@
 import { setRefreshHook } from "./lib/actions.js";
 import { applyDocumentLang, applyStaticStrings, getLang, setLang } from "./lib/i18n.js";
 import { initNav } from "./lib/nav.js";
+import { initSidebar } from "./lib/sidebar.js";
 import { initBenchmarkPanel, refreshBenchmarkPanel } from "./panels/benchmark.js";
 import { initModelsPanel, loadModels } from "./panels/models.js";
 import { initOllamaPanel, loadOllamaStatus } from "./panels/ollama.js";
@@ -27,6 +28,7 @@ function initLangSwitch() {
 applyDocumentLang();
 applyStaticStrings();
 initLangSwitch();
+initSidebar();
 
 initNav();
 initSystemPanel();

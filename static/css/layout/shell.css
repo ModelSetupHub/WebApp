@@ -4,6 +4,9 @@
   display: grid;
   grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
   min-height: 100vh;
+  /* The sidebar collapse animates this track; grid columns interpolate in every
+     engine this app targets. */
+  transition: grid-template-columns 0.22s ease;
 }
 
 /* ---------- Main ---------- */

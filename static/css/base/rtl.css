@@ -159,6 +159,16 @@ html[dir="rtl"] .bench-detail.is-open .bench-group-caret {
   transform: rotate(90deg);
 }
 
+/* The sidebar collapse chevron points towards the edge the rail tucks into,
+   which is the inline-start edge — the right side in Persian. */
+html[dir="rtl"] .sidebar-toggle svg {
+  transform: scaleX(-1);
+}
+
+html[dir="rtl"] body.sidebar-is-collapsed .sidebar-toggle svg {
+  transform: scaleX(-1) rotate(180deg);
+}
+
 /* The subsection title rule and the hint indent under it are both anchored to
    the start of the line. */
 html[dir="rtl"] .hint {

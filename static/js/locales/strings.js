@@ -22,6 +22,8 @@ export const STRINGS = {
   "nav.models": { en: "Models", fa: "مدل‌ها" },
   "nav.benchmark": { en: "Benchmark", fa: "بنچمارک" },
   "lang.switch": { en: "Language", fa: "زبان" },
+  "sidebar.collapse": { en: "Collapse sidebar", fa: "جمع کردن منو" },
+  "sidebar.expand": { en: "Expand sidebar", fa: "باز کردن منو" },
 
   "host.connecting": { en: "connecting…", fa: "در حال اتصال…" },
   "host.online": { en: "host online", fa: "میزبان متصل است" },
