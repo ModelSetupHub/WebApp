@@ -1,4 +1,4 @@
-"""API routes for the Benchmark tab, backed by ``core.ollama.experiment``.
+"""API routes for the Benchmark tab, backed by ``MSHCore.ollama.experiment``.
 
 ``compare_tests`` is the only core function this tab drives. It blocks for as
 long as every configuration takes to answer every prompt, so it runs in a
@@ -110,6 +110,19 @@ def api_benchmark_run():
 def api_benchmark_status():
     """Return the current comparison job, or null when none has run."""
     return ok(benchmark.status())
+
+
+@blueprint.route("/cancel", methods=["POST"])
+def api_benchmark_cancel():
+    """Ask the running comparison to stop.
+
+    Core discards partial results and unloads the model it loaded; the job then
+    reports the ``cancelled`` status the page already polls for.
+    """
+    if not benchmark.cancel():
+        return fail("No comparison is running", 409)
+
+    return ok(None)
 
 
 @blueprint.route("/clear", methods=["POST"])

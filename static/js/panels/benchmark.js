@@ -627,7 +627,26 @@ function renderProgress(job) {
         time: job.started_at,
         seconds: Math.round(job.elapsed_seconds),
       })
-    )}</span>`;
+    )}</span>
+    <button type="button" class="btn btn-sm" id="btn-bench-cancel">${escapeHtml(
+      t("bench.cancelRun")
+    )}</button>`;
+
+  const cancelBtn = document.getElementById("btn-bench-cancel");
+
+  cancelBtn.addEventListener("click", async () => {
+    const restore = setButtonBusy(cancelBtn);
+
+    try {
+      await postJson("/api/benchmark/cancel", {});
+      // The next poll settles the job into its cancelled state.
+      toast("pending", t("bench.cancelRun"), t("bench.cancelledBody"));
+    } catch (error) {
+      toast("error", t("bench.cannotCancel"), error.message);
+    } finally {
+      restore();
+    }
+  });
 }
 
 /**
@@ -677,6 +696,13 @@ function applyJob(job) {
     showAlert(errorEl, t("bench.comparisonFailed", { error: job.error }));
     resultsEl.innerHTML = `<div class="empty-state">${escapeHtml(t("bench.didNotFinish"))}</div>`;
     metaEl.textContent = t("bench.failedAt", { time: job.finished_at || "" });
+    return;
+  }
+
+  if (job.status === "cancelled") {
+    hideAlert(errorEl);
+    resultsEl.innerHTML = `<div class="empty-state">${escapeHtml(t("bench.cancelledBody"))}</div>`;
+    metaEl.textContent = t("bench.cancelledAt", { time: job.finished_at || "" });
     return;
   }
 
@@ -732,6 +758,8 @@ function startPolling() {
         );
       } else if (job && job.status === "failed") {
         toast("error", t("bench.failed"), job.error);
+      } else if (job && job.status === "cancelled") {
+        toast("info", t("bench.cancelled"), t("bench.cancelledBody"));
       }
     }
   }, POLL_INTERVAL_MS);

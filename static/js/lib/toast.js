@@ -6,12 +6,13 @@ const TOAST_ICON = {
   pending: '<span class="spinner"></span>',
   success: "✓",
   error: "✕",
+  info: "ℹ",
 };
 
 /**
  * Show a toast.
  *
- * @param {"pending"|"success"|"error"} state Visual tone.
+ * @param {"pending"|"success"|"error"|"info"} state Visual tone.
  * @param {string} title Headline text.
  * @param {string} [body] Optional detail text.
  * @param {{timeout?: number}} [options] Auto-dismiss delay in ms.

@@ -1,6 +1,6 @@
 """Background execution of multi-configuration Ollama comparisons.
 
-``core.ollama.experiment.compare_tests`` runs every configuration against every
+``MSHCore.ollama.experiment.compare_tests`` runs every configuration against every
 prompt in a single blocking call that can take minutes, so it is driven from a
 worker thread and the browser polls for the outcome instead of holding a request
 open.
@@ -15,7 +15,8 @@ import threading
 import time
 import uuid
 
-from core.ollama import experiment
+from MSHCore.cancellation import CancellationToken, OperationCancelled
+from MSHCore.ollama import experiment
 
 _lock = threading.Lock()
 _job: dict | None = None
@@ -68,7 +69,16 @@ def _work(job: dict) -> None:
             prompts=job["prompts"],
             configurations=job["configurations"],
             include_output=job["include_output"],
+            cancellation=job["token"],
         )
+    except OperationCancelled:
+        # Core discards partial results and unloads the model it loaded, so a
+        # cancelled run leaves nothing behind but its log entry.
+        outcome = {
+            "status": "cancelled",
+            "error": None,
+            "result": None,
+        }
     except Exception as error:
         outcome = {
             "status": "failed",
@@ -131,6 +141,7 @@ def start(
             "elapsed_seconds": 0.0,
             "error": None,
             "result": None,
+            "token": CancellationToken(),
         }
 
         job = _job
@@ -157,11 +168,30 @@ def status() -> dict | None:
         return _snapshot(_job) if _job is not None else None
 
 
+def cancel() -> bool:
+    """Request cancellation of the running comparison.
+
+    Core stops at the next safe point — between prompts or mid-generation —
+    discards partial results and unloads the model it loaded. The job then
+    settles into the ``cancelled`` status the poller reports.
+
+    Returns:
+        bool: Whether a running comparison was found to cancel.
+    """
+    with _lock:
+        if _job is None or _job["status"] != ACTIVE_STATUS:
+            return False
+
+        _job["token"].cancel("cancelled from the dashboard")
+        return True
+
+
 def clear() -> bool:
     """Forget a finished job so the page can start from a clean slate.
 
     Returns:
-        bool: Whether a job was discarded. A running job is never discarded.
+        bool: Whether a job was discarded. A running job is never discarded;
+            cancel it first.
     """
     global _job
 

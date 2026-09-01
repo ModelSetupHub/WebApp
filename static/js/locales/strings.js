@@ -642,6 +642,14 @@ export const STRINGS = {
     fa: "وضعیت مقایسه خوانده نشد — {error}",
   },
   "bench.cannotDiscard": { en: "Could not discard", fa: "حذف نتیجه انجام نشد" },
+  "bench.cancelRun": { en: "Cancel run", fa: "لغو اجرا" },
+  "bench.cancelled": { en: "Comparison cancelled", fa: "مقایسه لغو شد" },
+  "bench.cancelledBody": {
+    en: "Results so far were discarded and the model was unloaded.",
+    fa: "نتایج تا این لحظه دور انداخته شد و مدل از حافظه خارج شد.",
+  },
+  "bench.cancelledAt": { en: "Cancelled at {time}", fa: "لغو در {time}" },
+  "bench.cannotCancel": { en: "Could not cancel", fa: "لغو انجام نشد" },
 
   "bench.resultsTitle": { en: "Results", fa: "نتایج" },
   "bench.resultsHead": {

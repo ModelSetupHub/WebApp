@@ -167,7 +167,7 @@ python app.py
 Open <http://127.0.0.1:5000/>.
 
 The `pip install -e ./core` step is the one that is easy to miss. Without it every request fails with
-`ModuleNotFoundError: No module named 'core'`, because `app.py` imports the submodule by package name rather than by
+`ModuleNotFoundError: No module named 'MSHCore'`, because `app.py` imports the submodule by package name rather than by
 path.
 
 ## Notes on running it

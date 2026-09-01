@@ -1,6 +1,6 @@
 """Parsers turning raw Ollama CLI text into browser-renderable structures.
 
-`core.ollama.model` returns whatever the CLI printed. Shaping that text belongs
+`MSHCore.ollama.model` returns whatever the CLI printed. Shaping that text belongs
 to this layer so the submodule stays untouched.
 """
 

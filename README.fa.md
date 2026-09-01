@@ -166,8 +166,7 @@ python app.py
 آدرس <http://127.0.0.1:5000/> را باز کنید.
 
 مرحله‌ی `pip install -e ./core` همان مرحله‌ای است که راحت از قلم می‌افتد. بدون آن هر درخواست با
-`ModuleNotFoundError: No module named 'core'` شکست می‌خورد، چون `app.py` ساب‌ماژول را با نام پکیج import می‌کند نه با
-مسیر فایل.
+`ModuleNotFoundError: No module named 'MSHCore'` شکست می‌خورد، چون برنامه پکیج ساب‌ماژول (`MSHCore`) را با نام import می‌کند نه با مسیر فایل.
 
 ## نکاتی درباره‌ی اجرا
 
@@ -185,7 +184,7 @@ python app.py
 gui/
 ├── app.py                       # نقطه ورود؛ برنامه را می‌سازد و اجرا می‌کند
 ├── requirements.txt
-├── core/                        # ساب‌ماژول git ← ModelSetupHub/Core
+├── core/                        # ساب‌ماژول git ← ModelSetupHub/Core (پکیج: MSHCore)
 ├── webapp/
 │   ├── __init__.py              # create_app و ثبت blueprint‌ها
 │   ├── responses.py             # پوشش JSON مشترک و ترجمه استثناهای core

@@ -1,4 +1,4 @@
-"""API routes for the Ollama tab, backed by ``core.ollama.runtime``.
+"""API routes for the Ollama tab, backed by ``MSHCore.ollama.runtime``.
 
 Covers get_status, install, start and stop. Each mutating route answers with the
 resulting status so the browser renders observed state rather than an assumed
@@ -7,7 +7,7 @@ outcome.
 
 from flask import Blueprint
 
-from core.ollama import runtime as ollama_runtime
+from MSHCore.ollama import runtime as ollama_runtime
 
 from ..responses import body, describe_error, fail, ok, read_timeout
 

@@ -72,7 +72,7 @@ def fail(error: str, status: int = 500):
 def describe_error(error: Exception) -> str:
     """Build the most specific message available for a core exception.
 
-    ``core.ollama.model.load_model`` re-raises HTTP failures as a generic
+    ``MSHCore.ollama.model.load_model`` re-raises HTTP failures as a generic
     RuntimeError, so the Ollama API's own explanation only survives on the
     chained cause. Read it back when it is there.
 

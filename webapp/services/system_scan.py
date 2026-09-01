@@ -8,7 +8,7 @@ fresh one.
 from datetime import datetime
 import threading
 
-from core.system.scanner import scan_system
+from MSHCore.system.scanner import scan_system
 
 _scan_lock = threading.Lock()
 _scan_cache: dict | None = None

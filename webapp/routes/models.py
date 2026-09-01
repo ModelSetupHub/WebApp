@@ -1,4 +1,4 @@
-"""API routes for the Models tab, backed by ``core.ollama.model``.
+"""API routes for the Models tab, backed by ``MSHCore.ollama.model``.
 
 Maps every model function core exposes:
 
@@ -15,7 +15,7 @@ Maps every model function core exposes:
 
 from flask import Blueprint, request
 
-from core.ollama import model as ollama_model
+from MSHCore.ollama import model as ollama_model
 
 from ..parsing import parse_cli_table, parse_model_info
 from ..responses import body, call_core, describe_error, fail, ok
