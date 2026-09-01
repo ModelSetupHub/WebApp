@@ -1,4 +1,4 @@
-"""Model Setup Hub — GUI entrypoint.
+"""Model Setup Hub — WebApp entrypoint.
 
 Run with ``python app.py``. Application wiring lives in the ``webapp`` package;
 this file only builds and starts it.

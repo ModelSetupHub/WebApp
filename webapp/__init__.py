@@ -1,4 +1,4 @@
-"""Flask application package for the Model Setup Hub GUI.
+"""Flask application package for the Model Setup Hub WebApp.
 
 The app is a thin JSON layer over the `core` submodule plus the dashboard it
 serves. Responsibilities are split as:

@@ -138,8 +138,8 @@ select سه‌گزینه‌ای هستند نه چک‌باکس: `not set` و `f
 
 ```bash
 # ۱. کلون همراه با ساب‌ماژول
-git clone --recurse-submodules https://github.com/ModelSetupHub/gui.git
-cd gui
+git clone --recurse-submodules https://github.com/ModelSetupHub/WebApp.git
+cd WebApp
 
 # قبلاً بدون --recurse-submodules کلون کرده‌اید؟ الان دریافتش کنید:
 git submodule update --init --recursive
@@ -181,7 +181,7 @@ python app.py
 ## ساختار پروژه
 
 ```text
-gui/
+WebApp/
 ├── app.py                       # نقطه ورود؛ برنامه را می‌سازد و اجرا می‌کند
 ├── requirements.txt
 ├── core/                        # ساب‌ماژول git ← ModelSetupHub/Core (پکیج: MSHCore)

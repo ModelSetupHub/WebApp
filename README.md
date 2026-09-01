@@ -1,4 +1,4 @@
-# Model Setup Hub — Web GUI
+# Model Setup Hub — WebApp
 
 A local web interface for the [ModelSetupHub Core](https://github.com/ModelSetupHub/Core) toolkit. Every button on this
 dashboard calls one core function directly, so you keep full control over what runs on your machine — inspect hardware,
@@ -12,7 +12,7 @@ manage the Ollama runtime, work with local models, and benchmark generation para
 
 Model Setup Hub ships the same toolkit through two front ends, and they are meant for different people:
 
-- **This repository (Web GUI)** — for users who already know what they want to do. You choose the model, the parameters
+- **This repository (WebApp)** — for users who already know what they want to do. You choose the model, the parameters
   and the order of operations yourself. Nothing is decided for you, which makes the work faster and more precise, but it
   assumes you understand what a context window or a GPU layer count means.
 - **The MCP server** — for users who would rather describe the goal in plain language and let an AI agent drive the same
@@ -139,8 +139,8 @@ Both steps are required.
 
 ```bash
 # 1. clone with the submodule
-git clone --recurse-submodules https://github.com/ModelSetupHub/gui.git
-cd gui
+git clone --recurse-submodules https://github.com/ModelSetupHub/WebApp.git
+cd WebApp
 
 # already cloned without --recurse-submodules? fetch it now:
 git submodule update --init --recursive
@@ -183,7 +183,7 @@ job. Restarting the server discards both. Configurations you build in the Benchm
 ## Project layout
 
 ```text
-gui/
+WebApp/
 ├── app.py                       # entrypoint; builds and starts the app
 ├── requirements.txt
 ├── core/                        # git submodule → ModelSetupHub/Core
