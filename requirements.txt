@@ -1,1 +1,4 @@
+# WebApp dependencies. MSHCore is not here: install it from the `core`
+# submodule with `pip install -e ./core`.
+
 Flask==3.1.3
