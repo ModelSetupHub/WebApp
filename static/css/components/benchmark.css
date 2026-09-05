@@ -794,6 +794,34 @@
   flex-wrap: wrap;
 }
 
+/* The tools group: the saved-to-history pill and the download/discard
+   buttons, one tidy row that keeps its distance from the title instead of
+   squeezing beside it. */
+.bench-results-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--accent-green);
+  background: var(--accent-green-dim);
+  border: 1px solid var(--accent-green);
+  border-radius: 999px;
+  padding: 4px 11px;
+  white-space: nowrap;
+}
+
+.chip::before {
+  content: "¹3";
+  font-weight: 700;
+}
+
 .bench-results-title {
   font-size: 13px;
   font-weight: 600;

@@ -930,6 +930,8 @@ export const STRINGS = {
   // ---------- Benchmark: result downloads ----------
   "bench.exportCsv": { en: "CSV", fa: "CSV" },
   "bench.exportJson": { en: "JSON", fa: "JSON" },
+  "bench.exportCsvTitle": { en: "Download the summary table as CSV", fa: "دانلود جدول خلاصه به‌صورت CSV" },
+  "bench.exportJsonTitle": { en: "Download the full run as JSON", fa: "دانلود کامل اجرا به‌صورت JSON" },
 
   // ---------- Benchmark: the output-speed chart ----------
   "bench.chartTitle": { en: "Output speed", fa: "سرعت تولید" },

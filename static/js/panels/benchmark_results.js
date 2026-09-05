@@ -719,21 +719,23 @@ export function renderResults(el, job, {
             })
           )}</div>
         </div>
-        <div class="btn-row">
-          ${job.history_id ? `<span class="chip">${escapeHtml(t("bench.savedToHistory"))}</span>` : ""}
-          ${
-            downloadBase
-              ? `<button type="button" class="btn btn-sm" data-results-download="csv">${escapeHtml(
-                  t("bench.exportCsv")
-                )}</button>
-          <button type="button" class="btn btn-sm" data-results-download="json">${escapeHtml(
-            t("bench.exportJson")
-          )}</button>`
-              : ""
-          }
-          <button type="button" class="btn btn-sm" data-results-discard>${escapeHtml(
-            t("bench.discardResults")
-          )}</button>
+        <div class="bench-results-tools">
+          ${job.history_id ? `<span class="chip chip-saved">${escapeHtml(t("bench.savedToHistory"))}</span>` : ""}
+          <div class="btn-row">
+            ${
+              downloadBase
+                ? `<button type="button" class="btn btn-sm" data-results-download="csv" title="${escapeHtml(t("bench.exportCsvTitle"))}">${escapeHtml(
+                    t("bench.exportCsv")
+                  )}</button>
+            <button type="button" class="btn btn-sm" data-results-download="json" title="${escapeHtml(t("bench.exportJsonTitle"))}">${escapeHtml(
+              t("bench.exportJson")
+            )}</button>`
+                : ""
+            }
+            <button type="button" class="btn btn-sm" data-results-discard>${escapeHtml(
+              t("bench.discardResults")
+            )}</button>
+          </div>
         </div>
       </div>
 
