@@ -10,19 +10,23 @@ background job and the browser polls:
     GET  /api/benchmark/status     poll the running or finished job
     POST /api/benchmark/clear      discard a finished job
     POST /api/benchmark/export     download a run as a reusable config file
+    POST /api/benchmark/apply      create a model copy with the winner's options
 """
 
 from flask import Blueprint, jsonify, request
+
+from MSHCore.ollama import model as ollama_model
 
 from ..parsing import (
     OPTION_SCHEMA,
     ConfigError,
     normalize_configurations,
+    normalize_options,
     normalize_prompts,
     normalize_repetitions,
     parse_document,
 )
-from ..responses import body, fail, ok
+from ..responses import body, call_core, fail, ok
 from ..services import benchmark
 
 blueprint = Blueprint("benchmark", __name__, url_prefix="/api/benchmark")
@@ -147,6 +151,39 @@ def api_benchmark_clear():
         return fail("A comparison is still running", 409)
 
     return ok(None)
+
+
+@blueprint.route("/apply", methods=["POST"])
+def api_benchmark_apply():
+    """Create a model copy carrying the winning configuration.
+
+    The source model is never modified: Core's ``configure_model`` writes a
+    new model whose Modelfile carries the winning options, so the result of a
+    benchmark becomes a reusable thing on disk.
+    """
+    payload = body()
+    model = (payload.get("model") or "").strip()
+    target = (payload.get("target") or "").strip()
+
+    if not model:
+        return fail("A model name is required", 400)
+
+    if not target:
+        return fail("A name for the new model is required", 400)
+
+    try:
+        options = normalize_options(payload.get("options") or {})
+    except ConfigError as error:
+        return fail(str(error), 400)
+
+    if not options:
+        return fail(
+            "The winning configuration sets no options — the model already "
+            "runs this way, so there is nothing to apply.",
+            400,
+        )
+
+    return call_core(ollama_model.configure_model, model, target, options)
 
 
 @blueprint.route("/export", methods=["POST"])

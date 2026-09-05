@@ -1525,3 +1525,44 @@
 
 
 
+
+/* ---------- Keep the winner as a model ---------- */
+
+/* The apply form rides under the verdict: a name field with a suggested
+   model-style name, and one button. Quiet on purpose — it is a follow-up
+   action, not the finding. */
+.bench-apply {
+  background: var(--panel);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 11px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.bench-apply-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.bench-apply-row {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.bench-apply-row .input {
+  flex: 1;
+  min-width: 200px;
+  padding: 6px 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.bench-apply-hint {
+  font-size: 11.5px;
+  color: var(--text-faint);
+}

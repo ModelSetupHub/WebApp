@@ -914,6 +914,19 @@ export const STRINGS = {
   },
   "bench.savedToHistory": { en: "saved to history", fa: "در تاریخچه ذخیره شد" },
 
+  // ---------- Benchmark: keep the winner as a model ----------
+  "bench.applyLabel": {
+    en: "Keep this configuration as a model",
+    fa: "این تنظیم را به‌عنوان مدل نگه دار",
+  },
+  "bench.applyButton": { en: "Apply", fa: "اعمال" },
+  "bench.applyHint": {
+    en: "Creates a new model with these options; the original stays untouched.",
+    fa: "یک مدل جدید با این تنظیم‌ها می‌سازد؛ مدل اصلی دست‌نخورده می‌ماند.",
+  },
+  "bench.applied": { en: "Model created", fa: "مدل ساخته شد" },
+  "bench.applyFailed": { en: "Could not create the model", fa: "ساخت مدل ناموفق بود" },
+
   // ---------- Benchmark: several models in one run ----------
   "bench.resultsHeadModels": {
     en: "{n} model(s) compared",

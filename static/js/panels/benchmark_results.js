@@ -6,6 +6,8 @@
 
 import { escapeHtml } from "../lib/format.js";
 import { t, tn } from "../lib/i18n.js";
+import { setButtonBusy, toast } from "../lib/toast.js";
+import { postJson } from "../lib/api.js";
 import { indexOfName, seriesColor } from "./benchmark_store.js";
 import { optionChips } from "./benchmark_render.js";
 
@@ -480,6 +482,83 @@ function detail(test, position) {
  * @param {object} job Finished job snapshot from the status endpoint.
  */
 /**
+ * Build the "keep the winner as a model" form.
+ *
+ * A comparison that names a winner is only half a finding; this turns the
+ * other half into an action — creating a model copy whose Modelfile carries
+ * the winning options, without touching the source model. Only offered for
+ * configuration comparisons: a cross-model run's winner is a model, and a
+ * single run has nothing to compare.
+ *
+ * @param {object} job Finished job snapshot.
+ * @param {string} winnerName Name of the fastest test.
+ * @returns {string} HTML markup, or "" when the form does not apply.
+ */
+function applyForm(job, winnerName) {
+  if (job.cross_model || (job.result.tests || []).length < 2) {
+    return "";
+  }
+
+  const suggested = `${(job.result.model || "model").split(":")[0]}-${winnerName}`
+    .replace(/[^a-zA-Z0-9._-]/g, "-")
+    .slice(0, 64);
+
+  return `
+    <div class="bench-apply">
+      <label class="bench-apply-label" for="bench-apply-name">
+        ${escapeHtml(t("bench.applyLabel"))}
+      </label>
+      <div class="bench-apply-row">
+        <input class="input is-ltr" id="bench-apply-name" dir="ltr"
+               value="${escapeHtml(suggested)}" spellcheck="false" autocomplete="off">
+        <button type="button" class="btn btn-sm btn-primary" data-apply-winner="${escapeHtml(
+          winnerName
+        )}">${escapeHtml(t("bench.applyButton"))}</button>
+      </div>
+      <span class="bench-apply-hint">${escapeHtml(t("bench.applyHint"))}</span>
+    </div>`;
+}
+
+/**
+ * Bind the keep-winner form: send the winning options to Core's
+ * configure_model through the apply endpoint, and report what came back.
+ *
+ * @param {HTMLElement} el Results container.
+ * @param {object} job Finished job snapshot.
+ */
+function bindApply(el, job) {
+  const button = el.querySelector("[data-apply-winner]");
+
+  if (!button) {
+    return;
+  }
+
+  const input = el.querySelector("#bench-apply-name");
+
+  button.addEventListener("click", async () => {
+    const restore = setButtonBusy(button);
+
+    const winnerTest = (job.result.tests || []).find(
+      (test) => test.name === job.winner_name
+    );
+
+    try {
+      const { data } = await postJson("/api/benchmark/apply", {
+        model: job.result.model,
+        target: input.value.trim(),
+        options: winnerTest ? winnerTest.configuration : {},
+      });
+
+      toast("success", t("bench.applied"), String(data || "").slice(0, 160));
+    } catch (error) {
+      toast("error", t("bench.applyFailed"), error.message);
+    } finally {
+      restore();
+    }
+  });
+}
+
+/**
  * Paint a finished comparison.
  *
  * Both comparison kinds land here: a configuration comparison (one model,
@@ -511,6 +590,20 @@ export function renderResults(el, job, { discardEndpoint = "/api/benchmark/clear
     ? t("bench.resultsHeadModels", { n: tests.length })
     : t("bench.resultsHead", { model: result.model, n: tests.length });
 
+  // The winner the apply form defaults to: same rule the verdict uses —
+  // fastest average generation rate. Shared through the job so bindApply can
+  // find the winning test's options without recomputing.
+  const winnerTest = tests
+    .filter((test) => test.summary.average_output_tokens_per_second !== null)
+    .sort(
+      (a, b) =>
+        b.summary.average_output_tokens_per_second -
+        a.summary.average_output_tokens_per_second
+    )[0];
+
+  job.winner_name = winnerTest ? winnerTest.name : null;
+  const winnerName = job.winner_name;
+
   el.innerHTML = `
     <div class="bench-results">
       <div class="bench-results-head">
@@ -534,6 +627,7 @@ export function renderResults(el, job, { discardEndpoint = "/api/benchmark/clear
       </div>
 
       ${verdict(tests, significance)}
+      ${applyForm(job, winnerName)}
 
       <div class="bench-metrics">${metricBars(tests)}</div>
 
