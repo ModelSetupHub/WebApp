@@ -591,6 +591,17 @@ export const STRINGS = {
     en: "started {time} · {seconds}s elapsed",
     fa: "شروع {time} · {seconds} ثانیه گذشته",
   },
+  "bench.progressStarting": {
+    en: "Preparing the run — loading the model and starting the first prompt…",
+    fa: "آماده‌سازی اجرا — بارگذاری مدل و شروع اولین پرامپت…",
+  },
+  "bench.progressStep": {
+    en:
+      "Configuration {name} ({i} of {n}) · prompt {p} of {pn} · repetition " +
+      "{r} of {rn}",
+    fa:
+      "تنظیم {name} ({i} از {n}) · پرامپت {p} از {pn} · تکرار {r} از {rn}",
+  },
   "bench.runningPlaceholder": {
     en: "The comparison is running…",
     fa: "مقایسه در حال اجراست…",

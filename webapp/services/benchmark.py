@@ -50,12 +50,45 @@ def _snapshot(job: dict) -> dict:
         "include_output": job["include_output"],
         "repetitions": job["repetitions"],
         "planned_runs": job["planned_runs"],
+        "progress": job.get("progress"),
         "elapsed_seconds": elapsed,
         "started_at": job["started_at"],
         "finished_at": job["finished_at"],
         "error": job["error"],
         "result": job["result"],
     }
+
+
+def _record_progress(job: dict, step: dict) -> None:
+    """Turn one Core progress step into the job's browser-facing progress.
+
+    Core reports which configuration, prompt and repetition a step belongs to
+    and how many steps the whole comparison has finished; this adds the share
+    those steps make of the total, which is what a progress bar draws.
+
+    Args:
+        job: The running job the comparison belongs to.
+        step: One progress step as Core's callback delivered it.
+    """
+    steps_total = step["configuration_count"] * step["prompt_count"] * job["repetitions"]
+    steps_done = step["completed"]
+
+    with _lock:
+        job["progress"] = {
+            "phase": step["phase"],
+            "percent": (
+                round(steps_done / steps_total * 100, 1) if steps_total else 0.0
+            ),
+            "steps_done": steps_done,
+            "steps_total": steps_total,
+            "configuration": step.get("configuration"),
+            "configuration_index": step["configuration_index"],
+            "configuration_count": step["configuration_count"],
+            "prompt_index": step["prompt_index"],
+            "prompt_count": step["prompt_count"],
+            "repetition": step["repetition"],
+            "repetition_count": step["repetition_count"],
+        }
 
 
 def _work(job: dict) -> None:
@@ -72,6 +105,7 @@ def _work(job: dict) -> None:
             include_output=job["include_output"],
             cancellation=job["token"],
             repetitions=job["repetitions"],
+            on_progress=lambda step: _record_progress(job, step),
         )
     except OperationCancelled:
         # Core discards partial results and unloads the model it loaded, so a
@@ -98,6 +132,15 @@ def _work(job: dict) -> None:
         job.update(outcome)
         job["elapsed_seconds"] = time.monotonic() - job["started_monotonic"]
         job["finished_at"] = datetime.now().strftime("%H:%M:%S")
+
+        if outcome["status"] == "done" and job.get("progress"):
+            # The comparison completed, so the bar reads full rather than
+            # stopping at whatever the last progress step happened to land on.
+            job["progress"] = {
+                **job["progress"],
+                "percent": 100.0,
+                "steps_done": job["progress"]["steps_total"],
+            }
 
 
 def start(
@@ -141,6 +184,19 @@ def start(
             "include_output": include_output,
             "repetitions": repetitions,
             "planned_runs": len(configurations) * len(prompts) * repetitions,
+            "progress": {
+                "phase": "starting",
+                "percent": 0.0,
+                "steps_done": 0,
+                "steps_total": len(configurations) * len(prompts) * repetitions,
+                "configuration": None,
+                "configuration_index": 0,
+                "configuration_count": len(configurations),
+                "prompt_index": 0,
+                "prompt_count": len(prompts),
+                "repetition": 0,
+                "repetition_count": repetitions,
+            },
             "started_monotonic": time.monotonic(),
             "started_at": datetime.now().strftime("%H:%M:%S"),
             "finished_at": None,

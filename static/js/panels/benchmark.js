@@ -620,10 +620,11 @@ async function exportSetup() {
 /**
  * Show or hide the progress bar for a running job.
  *
- * The server reports elapsed time but not how far along it is: compare_tests
- * returns only when every configuration is finished, so there is no per-prompt
- * progress to report. The bar states what is being done and for how long instead
- * of implying a percentage it cannot know.
+ * Core reports each step the comparison takes — which configuration, which
+ * prompt, which repetition — so the bar shows a real percentage and the step
+ * text names the stage, instead of the old spinner that only knew the start
+ * time. Without a progress record (a server older than the field, or the
+ * instant before the first step lands) the text stands alone.
  *
  * @param {object|null} job Job snapshot, or null to hide the bar.
  */
@@ -634,25 +635,62 @@ function renderProgress(job) {
     return;
   }
 
+  const progress = job.progress || null;
+  const percent = progress ? progress.percent : null;
+
+  let stepLine = "";
+
+  if (progress && progress.phase !== "starting") {
+    stepLine = `<div class="bench-progress-detail">${escapeHtml(
+      t("bench.progressStep", {
+        name: progress.configuration,
+        i: progress.configuration_index,
+        n: progress.configuration_count,
+        p: progress.prompt_index,
+        pn: progress.prompt_count,
+        r: progress.repetition || 1,
+        rn: progress.repetition_count,
+      })
+    )}</div>`;
+  } else if (progress) {
+    stepLine = `<div class="bench-progress-detail">${escapeHtml(
+      t("bench.progressStarting")
+    )}</div>`;
+  }
+
+  const bar =
+    percent === null
+      ? ""
+      : `<div class="bench-progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${percent}">
+          <span class="bench-progress-track">
+            <span class="bench-progress-fill" style="width:${percent}%"></span>
+          </span>
+          <span class="bench-progress-percent" dir="ltr">${percent}%</span>
+        </div>`;
+
   progressEl.classList.remove("is-hidden");
   progressEl.innerHTML = `
-    <span class="spinner"></span>
-    <span class="bench-progress-text">${escapeHtml(
-      t("bench.progressText", {
-        runs: job.planned_runs,
-        configs: job.configurations.length,
-        model: job.model,
-      })
-    )}</span>
-    <span class="bench-progress-meta">${escapeHtml(
-      t("bench.progressMeta", {
-        time: job.started_at,
-        seconds: Math.round(job.elapsed_seconds),
-      })
-    )}</span>
-    <button type="button" class="btn btn-sm" id="btn-bench-cancel">${escapeHtml(
-      t("bench.cancelRun")
-    )}</button>`;
+    <div class="bench-progress-top">
+      <span class="spinner"></span>
+      <span class="bench-progress-text">${escapeHtml(
+        t("bench.progressText", {
+          runs: job.planned_runs,
+          configs: job.configurations.length,
+          model: job.model,
+        })
+      )}</span>
+      <span class="bench-progress-meta">${escapeHtml(
+        t("bench.progressMeta", {
+          time: job.started_at,
+          seconds: Math.round(job.elapsed_seconds),
+        })
+      )}</span>
+      <button type="button" class="btn btn-sm" id="btn-bench-cancel">${escapeHtml(
+        t("bench.cancelRun")
+      )}</button>
+    </div>
+    ${bar}
+    ${stepLine}`;
 
   const cancelBtn = document.getElementById("btn-bench-cancel");
 
