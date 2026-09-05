@@ -22,6 +22,55 @@ export const STRINGS = {
   "nav.models": { en: "Models", fa: "مدل‌ها" },
   "nav.benchmark": { en: "Benchmark", fa: "بنچمارک" },
   "nav.logs": { en: "Logs", fa: "لاگ‌ها" },
+  // ---------- Logs tab ----------
+  "logs.title": { en: "Logs", fa: "لاگ‌ها" },
+  "logs.note": {
+    en:
+      "The toolkit's execution log — every operation it ran, with level, " +
+      "component and details, newest entry at the top.",
+    fa:
+      "لاگ اجرای ابزار — هر عملیاتی که اجرا شده با سطح، کامپوننت و جزئیات، " +
+      "از قدیم به جدید.",
+  },
+  "logs.filterLevel": { en: "Level", fa: "سطح" },
+  "logs.filterComponent": { en: "Component", fa: "کامپوننت" },
+  "logs.filterAction": { en: "Action", fa: "اکشن" },
+  "logs.filterLimit": { en: "Limit", fa: "سقف" },
+  "logs.filterAll": { en: "All", fa: "همه" },
+  "logs.refresh": { en: "Refresh", fa: "بازخوانی" },
+  "logs.noEntries": {
+    en: "No log entries match the current filters.",
+    fa: "با این فیلترها هیچ ردیفی در لاگ نیست.",
+  },
+  "logs.loadFailed": {
+    en: "Could not load the log — {error}",
+    fa: "خواندن لاگ ناموفق بود — {error}",
+  },
+  "logs.colTime": { en: "time", fa: "زمان" },
+  "logs.colLevel": { en: "level", fa: "سطح" },
+  "logs.colComponent": { en: "component", fa: "کامپوننت" },
+  "logs.colAction": { en: "action", fa: "اکشن" },
+  "logs.colMessage": { en: "message", fa: "پیام" },
+  "logs.fileMeta": {
+    en: "{lines} lines · {kb} KB",
+    fa: "{lines} خط · {kb} کیلوبایت",
+  },
+  "logs.openFile": { en: "Open file", fa: "باز کردن فایل" },
+  "logs.opened": { en: "Opened in the OS viewer", fa: "در نمایشگر سیستم باز شد" },
+  "logs.openFailed": { en: "Could not open the file", fa: "باز کردن فایل ناموفق بود" },
+  "logs.download": { en: "Download", fa: "دانلود" },
+  "logs.downloadFailed": { en: "Could not download the file", fa: "دانلود فایل ناموفق بود" },
+  "logs.reset": { en: "Reset log", fa: "ریست لاگ" },
+  "logs.resetConfirm": {
+    en: "Erase every entry in the execution log? This cannot be undone.",
+    fa: "همه‌ی ردیف‌های لاگ اجرا پاک شود؟ این کار قابل بازگشت نیست.",
+  },
+  "logs.resetDone": { en: "Log reset", fa: "لاگ ریست شد" },
+  "logs.resetDoneBody": {
+    en: "{lines} entries were erased.",
+    fa: "{lines} ردیف پاک شد.",
+  },
+  "logs.resetFailed": { en: "Could not reset the log", fa: "ریست لاگ ناموفق بود" },
   "lang.switch": { en: "Language", fa: "زبان" },
   "sidebar.collapse": { en: "Collapse sidebar", fa: "جمع کردن منو" },
   "sidebar.expand": { en: "Expand sidebar", fa: "باز کردن منو" },

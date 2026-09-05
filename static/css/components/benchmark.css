@@ -804,7 +804,17 @@
   flex-wrap: wrap;
 }
 
-.chip {
+/* The head's buttons live in a .btn-row whose 76px columns fit the short
+   labels elsewhere in the app; "Discard results" is longer and spilled out.
+   The row sizes to its widest label here. */
+.bench-results-tools .btn-row {
+  grid-auto-columns: auto;
+}
+
+/* The saved-to-history pill: a labelled green chip with a check mark. Scoped
+   to .chip-saved — a global .chip::before would leak a stray glyph into every
+   neutral chip on other tabs (RAM types, GPU names...). */
+.chip-saved {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -817,8 +827,8 @@
   white-space: nowrap;
 }
 
-.chip::before {
-  content: "¹3";
+.chip-saved::before {
+  content: "\2713";
   font-weight: 700;
 }
 
@@ -1643,4 +1653,97 @@
   color: var(--text-faint);
   display: block;
   margin-top: 8px;
+}
+
+/* ---------- Logs tab ---------- */
+
+/* The filters sit in one row; the limit field and the refresh button tuck to
+   its end, so the whole query is one glance. */
+.logs-filters {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  padding: 13px 15px;
+  margin-bottom: 14px;
+}
+
+.logs-filter {
+  flex: 1;
+  min-width: 140px;
+}
+
+.logs-filter-limit {
+  flex: 0 0 120px;
+}
+
+.logs-refresh {
+  height: 34px;
+}
+
+.logs-wrap {
+  max-height: 62vh;
+  overflow-y: auto;
+}
+
+.logs-table {
+  font-size: 12px;
+}
+
+.logs-cell-time,
+.logs-cell-level {
+  white-space: nowrap;
+}
+
+.logs-cell-component,
+.logs-cell-action {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  max-width: 170px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.logs-cell-message {
+  min-width: 260px;
+}
+
+.logs-message {
+  color: var(--text);
+}
+
+.logs-row-details {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-faint);
+  margin-top: 3px;
+  word-break: break-all;
+}
+
+.logs-level {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.logs-level-INFO {
+  color: var(--accent-blue);
+  background: var(--accent-blue-dim);
+}
+
+.logs-level-WARNING {
+  color: var(--accent-amber);
+  background: var(--accent-amber-dim);
+}
+
+.logs-level-ERROR {
+  color: var(--accent-red);
+  background: var(--accent-red-dim);
 }

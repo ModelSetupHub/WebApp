@@ -63,6 +63,12 @@ def api_logs_list():
     except ValueError as error:
         return fail(str(error), 400)
 
+    # The log is appended to by several threads, so raw file order can
+    # interleave near-simultaneous writes; sorting by timestamp keeps the
+    # table strictly chronological — newest entry at the top, the way a log
+    # viewer reads: what just happened first.
+    entries.sort(key=lambda entry: entry["timestamp"], reverse=True)
+
     info = get_log_file_info()
 
     return ok(
