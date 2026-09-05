@@ -990,8 +990,8 @@ export const STRINGS = {
     fa: "نمودار مقایسه‌ی سرعت تولید با نوار نویز هر تنظیم",
   },
   "bench.chartCaption": {
-    en: "darker band = ± one standard deviation · longest bar with the narrowest band wins",
-    fa: "نوار تیره = ± یک انحراف معیار · برنده بلندترین با باریک‌ترین نوار",
+    en: "translucent red zone = ± one standard deviation around the mean · red ticks = the range ends · narrowest zone is the steadiest result",
+    fa: "ناحیه‌ی قرمز کم‌رنگ = ± یک انحراف معیار حول میانگین · خط‌های قرمز = مرز بازه · باریک‌ترین ناحیه پایدارترین نتیجه",
   },
 
   // ---------- Benchmark: several models in one run ----------

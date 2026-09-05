@@ -532,10 +532,20 @@ function outputSpeedChart(tests) {
       const isWinner = index === 0;
       const opacity = isWinner ? 1 : 0.55;
 
-      // The noise band centres on the mean and spans one stddev either way.
+      // The noise range spans one stddev either way around the mean and is
+      // drawn as a translucent red overlay ACROSS the bar plus two tick
+      // marks at its ends — unmistakable at a glance, unlike a halo that
+      // hides inside the bar.
       const noise = entry.noise ?? 0;
       const bandStart = scale(Math.max(entry.rate - noise, 0));
-      const bandWidth = Math.max(scale(entry.rate + noise) - bandStart, 1);
+      const bandEnd = scale(entry.rate + noise);
+      const bandWidth = Math.max(bandEnd - bandStart, 1);
+      const ticks = noise > 0
+        ? `<line x1="${(plotX + bandStart).toFixed(1)}" y1="${y}" x2="${(plotX + bandStart).toFixed(1)}" y2="${y + barHeight}"
+             stroke="var(--accent-red)" stroke-width="1.5"></line>
+           <line x1="${(plotX + bandEnd).toFixed(1)}" y1="${y}" x2="${(plotX + bandEnd).toFixed(1)}" y2="${y + barHeight}"
+             stroke="var(--accent-red)" stroke-width="1.5"></line>`
+        : "";
 
       const valueText = Number(entry.rate).toFixed(1);
       const valueX = plotX + barWidth + 8;
@@ -552,7 +562,8 @@ function outputSpeedChart(tests) {
         ${
           noise > 0
             ? `<rect x="${(plotX + bandStart).toFixed(1)}" y="${y}" width="${bandWidth.toFixed(1)}"
-                 height="${barHeight}" fill="#000" opacity="0.28"></rect>`
+                 height="${barHeight}" fill="var(--accent-red)" opacity="0.25"></rect>
+           ${ticks}`
             : ""
         }
         <text x="${Math.min(valueX, width - 8)}" y="${y + barHeight / 2 + 4}"
