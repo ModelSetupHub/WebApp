@@ -1121,6 +1121,9 @@ function applyJob(job) {
 
   if (job.status === "running") {
     setRunning(true);
+    // The results area is the progress area while a run is in flight; the
+    // finished results replace it the moment it settles.
+    resultsEl.innerHTML = "";
     renderProgress(job);
     metaEl.textContent = t("bench.runningSince", { time: job.started_at });
     return;
@@ -1285,9 +1288,6 @@ function bindRun() {
 
       activeEndpoints = endpoints;
       hideAlert(errorEl);
-      resultsEl.innerHTML = `<div class="empty-state">${escapeHtml(
-        t("bench.runningPlaceholder")
-      )}</div>`;
       applyJob(data);
       startPolling();
 

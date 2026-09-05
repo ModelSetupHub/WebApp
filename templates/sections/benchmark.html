@@ -234,14 +234,17 @@
           </span>
         </div>
 
-        <div class="bench-progress is-hidden" id="bench-progress" aria-live="polite"></div>
       </div>
     </aside>
   </div>
 
   {# ---------- Results ---------- #}
+  {# While a run is in flight this section carries its live progress; the
+     finished results replace it the moment they exist. #}
   <div class="subsection">
     <h2 class="subsection-title" data-i18n="bench.resultsTitle">Results</h2>
+
+    <div class="bench-progress is-hidden" id="bench-progress" aria-live="polite"></div>
 
     <div id="bench-results">
       <div class="empty-state" data-i18n="bench.noRunYet">No benchmark has been run yet.</div>

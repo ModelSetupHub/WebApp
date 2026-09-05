@@ -716,7 +716,7 @@
   border-left: 3px solid var(--accent-blue);
   border-radius: var(--radius-sm);
   padding: 12px 15px;
-  margin-top: 12px;
+  margin: 12px 0 16px;
 }
 
 .bench-progress-top {
