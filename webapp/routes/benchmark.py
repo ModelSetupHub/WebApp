@@ -19,6 +19,7 @@ from ..parsing import (
     ConfigError,
     normalize_configurations,
     normalize_prompts,
+    normalize_repetitions,
     parse_document,
 )
 from ..responses import body, fail, ok
@@ -89,6 +90,7 @@ def api_benchmark_run():
     try:
         prompts = normalize_prompts(payload.get("prompts"))
         configurations = normalize_configurations(payload.get("configurations"))
+        repetitions = normalize_repetitions(payload.get("repetitions"))
     except ConfigError as error:
         return fail(str(error), 400)
 
@@ -98,6 +100,7 @@ def api_benchmark_run():
             prompts=prompts,
             configurations=configurations,
             include_output=bool(payload.get("include_output")),
+            repetitions=repetitions,
         )
     except RuntimeError as error:
         # 409: the request is well-formed, the server is just already busy.
@@ -147,6 +150,7 @@ def api_benchmark_export():
     try:
         configurations = normalize_configurations(payload.get("configurations"))
         prompts = normalize_prompts(payload.get("prompts")) if payload.get("prompts") else []
+        repetitions = normalize_repetitions(payload.get("repetitions"))
     except ConfigError as error:
         return fail(str(error), 400)
 
@@ -154,6 +158,7 @@ def api_benchmark_export():
         "model": model or None,
         "prompts": prompts,
         "include_output": bool(payload.get("include_output")),
+        "repetitions": repetitions,
         "configurations": configurations,
     }
 

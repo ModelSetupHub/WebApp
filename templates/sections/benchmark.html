@@ -1,5 +1,5 @@
 {# Benchmark tab: build a set of configurations, then compare them with
-   core.ollama.experiment.compare_tests. #}
+   MSHCore.benchmark.ollama_runner.compare_tests. #}
 <section id="benchmark" class="panel-section" aria-labelledby="benchmark-title">
   <header class="section-head">
     <div class="section-heading">
@@ -42,6 +42,16 @@
                   data-i18n-placeholder="bench.promptsPlaceholder"></textarea>
         <span class="field-hint" data-i18n="bench.promptsHint">
           Separate prompts with a blank line.
+        </span>
+      </label>
+
+      <label class="field">
+        <span class="field-label" data-i18n="bench.repetitions">Repetitions</span>
+        <input class="input is-ltr" id="bench-repetitions" type="number" dir="ltr"
+               min="1" max="10" step="1" value="1" inputmode="numeric">
+        <span class="field-hint" data-i18n="bench.repetitionsHint">
+          Each prompt runs this many times; results average the runs and report
+          how far they spread, so a real difference can be told apart from noise.
         </span>
       </label>
     </div>

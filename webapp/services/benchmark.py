@@ -48,6 +48,7 @@ def _snapshot(job: dict) -> dict:
         "prompts": job["prompts"],
         "configurations": job["configurations"],
         "include_output": job["include_output"],
+        "repetitions": job["repetitions"],
         "planned_runs": job["planned_runs"],
         "elapsed_seconds": elapsed,
         "started_at": job["started_at"],
@@ -70,6 +71,7 @@ def _work(job: dict) -> None:
             configurations=job["configurations"],
             include_output=job["include_output"],
             cancellation=job["token"],
+            repetitions=job["repetitions"],
         )
     except OperationCancelled:
         # Core discards partial results and unloads the model it loaded, so a
@@ -103,6 +105,7 @@ def start(
     prompts: list[str],
     configurations: list[dict],
     include_output: bool = False,
+    repetitions: int = 1,
 ) -> dict:
     """Begin a comparison in the background, replacing any finished one.
 
@@ -111,6 +114,8 @@ def start(
         prompts: Prompt strings sent to each configuration.
         configurations: Dicts holding a ``name`` and an ``options`` dict.
         include_output: Keep the generated text in the results.
+        repetitions: How many times every prompt runs per configuration, from
+            1. Results average the runs and report their noise.
 
     Returns:
         dict: Snapshot of the newly started job.
@@ -134,7 +139,8 @@ def start(
             "prompts": prompts,
             "configurations": configurations,
             "include_output": include_output,
-            "planned_runs": len(configurations) * len(prompts),
+            "repetitions": repetitions,
+            "planned_runs": len(configurations) * len(prompts) * repetitions,
             "started_monotonic": time.monotonic(),
             "started_at": datetime.now().strftime("%H:%M:%S"),
             "finished_at": None,

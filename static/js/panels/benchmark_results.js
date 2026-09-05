@@ -57,6 +57,35 @@ function num(value, digits) {
 }
 
 /**
+ * Format a metric as its mean with the noise band the repetitions measured.
+ *
+ * The spread is the run-to-run noise: an average without it is only half the
+ * finding, since two configurations a hair apart may be naming the same speed.
+ * Core reports the noise of an average under the base metric's name (the
+ * output-speed noise lands on "output_tokens_per_second_stddev"), and a test
+ * measured once has no spread at all, getting the bare number.
+ *
+ * @param {object} summary One test's summary statistics.
+ * @param {object} metric Metric descriptor.
+ * @returns {string} Display text such as "12.4 ± 0.3".
+ */
+function numWithNoise(summary, metric) {
+  const mean = num(summary[metric.key], metric.digits);
+
+  if (summary[metric.key] === null || summary[metric.key] === undefined) {
+    return mean;
+  }
+
+  const spread = summary[`${metric.key.replace(/^average_/, "")}_stddev`];
+
+  if (spread === null || spread === undefined) {
+    return mean;
+  }
+
+  return `${mean} ± ${Number(spread).toFixed(metric.digits)}`;
+}
+
+/**
  * Return the colour a test is drawn in.
  *
  * Results outlive the configuration list — the list can be edited after a run —
@@ -131,9 +160,9 @@ function metricBars(tests) {
 
         return `
           <div class="bench-bar-row" style="--series-color:${testColor(test, position)}">
-            <span class="bench-bar-name" dir="ltr" title="${escapeHtml(test.name)}">${escapeHtml(test.name)}</span>
+            <span class="bench-bar-name" dir="ltr">${escapeHtml(test.name)}</span>
             <span class="bench-bar-value${isBest ? " is-best" : ""}${missing ? " is-empty" : ""}" dir="ltr">
-              ${escapeHtml(num(value, metric.digits))}
+              ${escapeHtml(numWithNoise(test.summary, metric))}
             </span>
             <span class="bench-bar-track">
               <span class="bench-bar-fill" style="width:${width.toFixed(1)}%"></span>
@@ -171,7 +200,7 @@ function summaryTable(tests) {
         const isBest =
           value !== null && value !== undefined && value === bests[index] && tests.length > 1;
         return `<td class="is-number${isBest ? " is-best" : ""}" dir="ltr">${escapeHtml(
-          num(value, metric.digits)
+          numWithNoise(test.summary, metric)
         )}</td>`;
       }).join("");
 
@@ -211,12 +240,17 @@ function summaryTable(tests) {
  * Build the verdict callout naming the configuration to keep.
  *
  * Output speed decides it: it is the metric a user of the model actually waits
- * on, and response time follows from it for a fixed prompt set.
+ * on, and response time follows from it for a fixed prompt set. When the
+ * comparison measured each prompt more than once, Core's own significance
+ * assessment is shown under the verdict — it is the part that says whether the
+ * gap survives the noise, which is the difference between a finding and a
+ * coin flip.
  *
  * @param {Array<object>} tests Tests from compare_tests.
+ * @param {object|null} significance The result's significance assessment.
  * @returns {string} HTML markup.
  */
-function verdict(tests) {
+function verdict(tests, significance) {
   const metric = METRICS[0];
   const best = bestValue(tests, metric);
 
@@ -242,10 +276,42 @@ function verdict(tests) {
     const runnerUp = Math.max(...rates);
     const gain = runnerUp > 0 ? ((best - runnerUp) / runnerUp) * 100 : 0;
 
-    note =
-      gain >= 0.5
-        ? t("bench.verdictGain", { percent: gain.toFixed(1) })
-        : t("bench.verdictTied");
+    // The noise assessment overrides the raw gain: announcing "12% faster"
+    // above an assessment that says the gap is within noise would answer the
+    // question twice with opposite answers.
+    if (significance && significance.significant === false) {
+      note = t("bench.verdictWithinNoise");
+    } else if (gain >= 0.5) {
+      note = t("bench.verdictGain", { percent: gain.toFixed(1) });
+    } else {
+      note = t("bench.verdictTied");
+    }
+  }
+
+  let assessment = "";
+
+  if (significance) {
+    const tone =
+      significance.significant === true
+        ? "is-good"
+        : significance.significant === false
+          ? "is-tied"
+          : "is-unmeasured";
+
+    const label =
+      significance.significant === true
+        ? t("bench.significanceReal")
+        : significance.significant === false
+          ? t("bench.significanceNoise")
+          : t("bench.significanceUnknown");
+
+    const message = significance.message || "";
+
+    assessment = `
+      <div class="bench-significance ${tone}">
+        <span class="bench-significance-label">${escapeHtml(label)}</span>
+        <span class="bench-significance-message" dir="auto">${escapeHtml(message)}</span>
+      </div>`;
   }
 
   return `
@@ -255,6 +321,7 @@ function verdict(tests) {
         <div class="bench-verdict-name" dir="ltr">${escapeHtml(winner.name)}</div>
         <div class="bench-verdict-note">${escapeHtml(note)}</div>
       </div>
+      ${assessment}
     </div>`;
 }
 
@@ -291,6 +358,48 @@ function detail(test, position) {
               result.response || t("bench.emptyResponse")
             )}</pre>`;
 
+      // The machine readings are optional: they are absent on a machine
+      // without an NVIDIA GPU, or when a generation produced no content, and
+      // are shown only when Core actually reported them.
+      const measurements = [
+        {
+          key: "ttft_seconds",
+          digits: 3,
+          stat: "bench.statTtft",
+        },
+        {
+          key: "vram_used_mb",
+          digits: 0,
+          stat: "bench.statVram",
+        },
+        {
+          key: "gpu_temperature_c",
+          digits: 1,
+          stat: "bench.statTemperature",
+        },
+        {
+          key: "gpu_clock_mhz",
+          digits: 0,
+          stat: "bench.statClock",
+        },
+      ]
+        .map((reading) => ({ ...reading, value: result[reading.key] }))
+        .filter((reading) => reading.value !== null && reading.value !== undefined);
+
+      const measurementStats = measurements
+        .map(
+          (reading) => `
+            <span class="bench-stat"><b dir="ltr">${num(
+              reading.value,
+              reading.digits
+            )}</b> ${escapeHtml(t(reading.stat))}</span>`
+        )
+        .join("");
+
+      const measurementBlock = measurementStats
+        ? `<div class="bench-prompt-machine">${measurementStats}</div>`
+        : "";
+
       return `
         <div class="bench-prompt">
           <div class="bench-prompt-head">
@@ -304,6 +413,7 @@ function detail(test, position) {
             <span class="bench-stat"><b dir="ltr">${result.output_tokens}</b> ${escapeHtml(t("bench.statOutputTokens"))}</span>
             <span class="bench-stat"><b dir="ltr">${result.prompt_tokens}</b> ${escapeHtml(t("bench.statPromptTokens"))}</span>
           </div>
+          ${measurementBlock}
           ${output}
         </div>`;
     })
@@ -342,6 +452,9 @@ export function renderResults(el, job) {
     return;
   }
 
+  const significance = job.result.significance || null;
+  const reps = job.repetitions || 1;
+
   el.innerHTML = `
     <div class="bench-results">
       <div class="bench-results-head">
@@ -354,6 +467,7 @@ export function renderResults(el, job) {
               prompts: job.prompts.length,
               seconds: num(job.elapsed_seconds, 1),
               time: job.finished_at || "",
+              reps,
             })
           )}</div>
         </div>
@@ -362,7 +476,7 @@ export function renderResults(el, job) {
         )}</button>
       </div>
 
-      ${verdict(tests)}
+      ${verdict(tests, significance)}
 
       <div class="bench-metrics">${metricBars(tests)}</div>
 

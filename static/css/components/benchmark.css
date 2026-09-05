@@ -564,6 +564,49 @@
   margin-top: 3px;
 }
 
+/* The noise assessment under the verdict: whether the winner's gap survives
+   the spread the repetitions measured. Tone follows the assessment — real,
+   tied, or measured once. */
+.bench-significance {
+  flex-basis: 100%;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--border-soft);
+  padding-top: 10px;
+}
+
+.bench-significance-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.bench-significance.is-good .bench-significance-label {
+  color: var(--accent-green);
+  background: var(--accent-green-dim);
+}
+
+.bench-significance.is-tied .bench-significance-label {
+  color: var(--accent-amber);
+  background: var(--accent-amber-dim);
+}
+
+.bench-significance.is-unmeasured .bench-significance-label {
+  color: var(--text-dim);
+  background: var(--panel-raised);
+}
+
+.bench-significance-message {
+  font-size: 12.5px;
+  color: var(--text-dim);
+}
+
 /* ---------- Comparison bars ---------- */
 
 /* One metric per block, each configuration a row inside it, bars scaled against
@@ -795,6 +838,21 @@
 .bench-stat b {
   color: var(--text);
   font-weight: 600;
+}
+
+/* The machine readings row — TTFT, VRAM, GPU temperature and clock — set
+   slightly apart from the timing stats it follows, since those describe the
+   generation and these describe the machine that produced it. */
+.bench-prompt-machine {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 5px;
+  padding-left: 26px;
+}
+
+.bench-prompt-machine .bench-stat b {
+  color: var(--text-dim);
 }
 
 .bench-output {

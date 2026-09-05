@@ -43,6 +43,16 @@ const cardsEl = document.getElementById("bench-cards");
 const modelEl = document.getElementById("bench-model");
 const promptsEl = document.getElementById("bench-prompts");
 const includeOutputEl = document.getElementById("bench-include-output");
+const repetitionsEl = document.getElementById("bench-repetitions");
+
+// Parsed on every read rather than trusted, because a number input still hands
+// back a string, and an empty or out-of-range field falls back to the default.
+function readRepetitions() {
+  const value = Number.parseInt(repetitionsEl.value, 10);
+  return Number.isInteger(value) && value >= 1
+    ? Math.min(value, 10)
+    : 1;
+}
 
 const configListEl = document.getElementById("bench-config-list");
 const configCountEl = document.getElementById("bench-config-count");
@@ -97,7 +107,8 @@ function readPrompts() {
 function renderCards() {
   const configurations = getConfigurations();
   const prompts = readPrompts();
-  const runs = configurations.length * prompts.length;
+  const reps = readRepetitions();
+  const runs = configurations.length * prompts.length * reps;
   const status = getOllamaStatus();
   const serverUp = status ? status.running : null;
 
@@ -115,7 +126,11 @@ function renderCards() {
     <div class="card">
       <div class="card-label">${escapeHtml(t("bench.cardTotalRuns"))}</div>
       <div class="card-value ${runs > 0 ? "" : "is-unknown"}" dir="ltr">${runs || "—"}</div>
-      <div class="card-sub">${escapeHtml(t("bench.cardTotalRunsSub"))}</div>
+      <div class="card-sub">${escapeHtml(
+        reps > 1
+          ? t("bench.cardTotalRunsRepsSub", { reps })
+          : t("bench.cardTotalRunsSub")
+      )}</div>
     </div>
     <div class="card">
       <div class="card-label">${escapeHtml(t("bench.cardServer"))}</div>
@@ -146,6 +161,8 @@ function renderSetup() {
 
   clearBtn.disabled = configurations.length === 0 || isRunning;
   exportBtn.disabled = configurations.length === 0;
+
+  repetitionsEl.disabled = isRunning;
 
   updateRunState();
 }
@@ -192,7 +209,7 @@ function updateRunState() {
     return;
   }
 
-  const runs = configurations.length * prompts.length;
+  const runs = configurations.length * prompts.length * readRepetitions();
 
   runStateEl.className = "control-title is-good";
   runStateEl.textContent = t("bench.ready");
@@ -497,6 +514,10 @@ function applyImport(mode) {
     promptsEl.value = pendingImport.prompts.join("\n\n");
   }
 
+  if (pendingImport.repetitions && readRepetitions() === 1) {
+    repetitionsEl.value = pendingImport.repetitions;
+  }
+
   if (pendingImport.include_output !== null && pendingImport.include_output !== undefined) {
     includeOutputEl.checked = pendingImport.include_output;
   }
@@ -569,6 +590,7 @@ async function exportSetup() {
         model: modelEl.value,
         prompts: readPrompts(),
         include_output: includeOutputEl.checked,
+        repetitions: readRepetitions(),
         configurations: toPayload(),
       }),
     });
@@ -657,7 +679,7 @@ function renderProgress(job) {
 function setRunning(running) {
   isRunning = running;
 
-  [modelEl, promptsEl, includeOutputEl, addBtn, importBtn].forEach((el) => {
+  [modelEl, promptsEl, includeOutputEl, repetitionsEl, addBtn, importBtn].forEach((el) => {
     el.disabled = running;
   });
 
@@ -775,6 +797,7 @@ function bindRun() {
         model: modelEl.value,
         prompts,
         include_output: includeOutputEl.checked,
+        repetitions: readRepetitions(),
         configurations: toPayload(),
       });
 
@@ -820,6 +843,11 @@ export async function initBenchmarkPanel() {
   bindRun();
 
   promptsEl.addEventListener("input", () => {
+    renderCards();
+    updateRunState();
+  });
+
+  repetitionsEl.addEventListener("input", () => {
     renderCards();
     updateRunState();
   });

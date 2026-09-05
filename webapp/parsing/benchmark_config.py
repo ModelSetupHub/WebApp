@@ -23,8 +23,12 @@ from .benchmark_options import OPTIONS_BY_KEY
 MAX_CONFIGURATIONS = 12
 MAX_PROMPTS = 20
 
+# A repetition re-runs the whole prompt set, so the cap keeps a fat-fingered
+# value from turning one comparison into an afternoon of generation.
+MAX_REPETITIONS = 10
+
 # Keys that identify a wrapper object rather than a bare options mapping.
-_DOCUMENT_KEYS = {"model", "prompts", "configurations", "configs", "include_output"}
+_DOCUMENT_KEYS = {"model", "prompts", "configurations", "configs", "include_output", "repetitions"}
 _CONFIG_KEYS = {"name", "options", "parameters", "config"}
 
 _TRUE_WORDS = {"true", "yes", "on", "1"}
@@ -264,6 +268,37 @@ def normalize_configurations(entries) -> list[dict]:
     return configurations
 
 
+def normalize_repetitions(value) -> int:
+    """Validate and coerce the repetitions count for a comparison.
+
+    Args:
+        value: The repetitions value as sent, or None for the default of one.
+
+    Returns:
+        int: The repetition count, always at least one.
+
+    Raises:
+        ConfigError: If the value is not a whole number in range.
+    """
+    if value is None or value == "":
+        return 1
+
+    try:
+        count = int(value)
+    except (TypeError, ValueError):
+        raise ConfigError("Repetitions must be a whole number")
+
+    if count < 1:
+        raise ConfigError("Repetitions must be at least 1")
+
+    if count > MAX_REPETITIONS:
+        raise ConfigError(
+            f"At most {MAX_REPETITIONS} repetitions can be requested in one run"
+        )
+
+    return count
+
+
 def normalize_prompts(value) -> list[str]:
     """Validate the prompt list, accepting one blob of text or a JSON array.
 
@@ -332,6 +367,7 @@ def parse_document(text: str) -> dict:
             "prompts": [],
             "configurations": normalize_configurations(document),
             "include_output": None,
+            "repetitions": None,
         }
 
     if not isinstance(document, dict):
@@ -347,6 +383,7 @@ def parse_document(text: str) -> dict:
             "prompts": [],
             "configurations": normalize_configurations([document]),
             "include_output": None,
+            "repetitions": None,
         }
 
     entries = document.get("configurations")
@@ -362,6 +399,7 @@ def parse_document(text: str) -> dict:
     model = document.get("model")
     raw_prompts = document.get("prompts")
     include_output = document.get("include_output")
+    repetitions = document.get("repetitions")
 
     return {
         "model": str(model).strip() if isinstance(model, str) and model.strip() else None,
@@ -372,4 +410,5 @@ def parse_document(text: str) -> dict:
             if include_output is not None
             else None
         ),
+        "repetitions": normalize_repetitions(repetitions) if repetitions is not None else None,
     }

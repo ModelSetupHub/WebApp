@@ -657,8 +657,12 @@ export const STRINGS = {
     fa: "{model} · {n} تنظیم",
   },
   "bench.resultsSub": {
-    en: "{prompts} prompt(s) each · {seconds} s total · finished {time}",
-    fa: "هر کدام {prompts} پرامپت · مجموعاً {seconds} ثانیه · پایان در {time}",
+    en:
+      "{prompts} prompt(s) each · {reps} repetition(s) · {seconds} s total · " +
+      "finished {time}",
+    fa:
+      "هر کدام {prompts} پرامپت · {reps} تکرار · مجموعاً {seconds} ثانیه · " +
+      "پایان در {time}",
   },
   "bench.discardResults": { en: "Discard results", fa: "دور انداختن نتایج" },
 
@@ -716,6 +720,36 @@ export const STRINGS = {
   "bench.statPromptRate": { en: "prompt tok/s", fa: "توکن/ثانیه پرامپت" },
   "bench.statOutputTokens": { en: "output tokens", fa: "توکن تولیدشده" },
   "bench.statPromptTokens": { en: "prompt tokens", fa: "توکن پرامپت" },
+  "bench.statTtft": { en: "ttft s", fa: "ثانیه تا اولین توکن" },
+  "bench.statVram": { en: "MB VRAM", fa: "مگابایت VRAM" },
+  "bench.statTemperature": { en: "°C GPU", fa: "درجه GPU" },
+  "bench.statClock": { en: "MHz clock", fa: "مگاهرتز کلاک" },
+
+  // ---------- Benchmark: repetitions and noise ----------
+  "bench.repetitions": { en: "Repetitions", fa: "تکرارها" },
+  "bench.repetitionsHint": {
+    en:
+      "Each prompt runs this many times; results average the runs and report " +
+      "how far they spread, so a real difference can be told apart from noise.",
+    fa:
+      "هر پرامپت این تعداد بار اجرا می‌شود؛ نتیجه میانگین اجراها را می‌دهد و " +
+      "میزان پراکندگی‌شان را گزارش می‌کند تا تفاوت واقعی از نویز شناخته شود.",
+  },
+  "bench.cardTotalRunsRepsSub": {
+    en: "{reps} repetition(s) per prompt included",
+    fa: "شامل {reps} تکرار برای هر پرامپت",
+  },
+  "bench.significanceReal": { en: "Real difference", fa: "تفاوت واقعی" },
+  "bench.significanceNoise": { en: "Within noise", fa: "در حد نویز" },
+  "bench.significanceUnknown": { en: "Unmeasured", fa: "اندازه‌گیری‌نشده" },
+  "bench.verdictWithinNoise": {
+    en:
+      "The gap to the next configuration is within measurement noise — either " +
+      "is fine; pick on other grounds.",
+    fa:
+      "فاصله با تنظیم بعدی در حد نویز اندازه‌گیری است — هر کدام کافی است؛ " +
+      "بر اساس معیارهای دیگر انتخاب کنید.",
+  },
 
   // ---------- Ollama option groups and hints ----------
   // The server publishes the option table (key, type, bounds); only the prose
