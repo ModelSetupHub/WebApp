@@ -1,16 +1,207 @@
 /* ---------- Benchmark ---------- */
 
-/* The target step pairs the model picker with the prompt box, so the two
-   inputs that define a run are read together rather than stacked apart. */
-.bench-target {
+/* The workbench: the three inputs form one column, the launch bay holds the
+   plan, the numbers and the run button and sticks while the inputs scroll. */
+.bench-workbench {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 240px);
-  gap: 14px 22px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 320px);
+  gap: 16px;
   align-items: start;
+  margin-bottom: 26px;
+}
+
+.bench-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+/* One numbered card per input. The head carries the step number, the title
+   and the live count of what it holds, so each card reports its own state. */
+.bench-card {
   background: var(--panel);
   border: 1px solid var(--border-soft);
   border-radius: var(--radius);
-  padding: 16px 18px;
+  padding: 15px 17px;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.bench-card-head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  flex-wrap: wrap;
+}
+
+.bench-card-step {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--panel-raised);
+  border: 1px solid var(--border-strong);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.bench-card-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+.bench-card-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.bench-card-sub {
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+.bench-card-actions {
+  display: flex;
+  gap: 7px;
+  margin-left: auto;
+}
+
+.bench-card-badge {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-faint);
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  padding: 2px 9px;
+  min-width: 26px;
+  text-align: center;
+}
+
+.bench-card-badge.is-active {
+  color: var(--accent-amber);
+  border-color: var(--accent-amber);
+}
+
+.bench-card-hint {
+  font-size: 12px;
+  color: var(--text-faint);
+  margin: 0;
+}
+
+.bench-card textarea {
+  width: 100%;
+  resize: vertical;
+}
+
+.bench-card-inline {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.bench-card-inline .bench-reps-field {
+  flex: 0 0 150px;
+}
+
+.bench-card-inline .bench-card-hint {
+  flex: 1;
+  padding-top: 4px;
+}
+
+/* The launch bay: the plan, the numbers and the run button, pinned while the
+   inputs scroll. Everything needed to press the button is always on screen. */
+.bench-launch {
+  min-width: 0;
+}
+
+.bench-launch-sticky {
+  position: sticky;
+  top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--panel-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+.bench-launch-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.bench-launch-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text);
+}
+
+.bench-launch-switch {
+  align-self: flex-start;
+}
+
+.btn-block {
+  width: 100%;
+}
+
+.bench-run-note-pair {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+}
+
+.bench-run-note-pair .control-title {
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
+.bench-run-note-pair .control-note {
+  color: var(--text-faint);
+}
+
+/* Inside the narrow bay the numbers sit two per row instead of one wide strip. */
+.bench-launch .bench-stats {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 0;
+}
+
+.bench-launch .bench-stat-card {
+  padding: 8px 11px;
+}
+
+.bench-launch .bench-stat-card-value {
+  font-size: 14px;
+}
+
+/* The plan panel keeps its per-kind colour edge but loses its own card frame —
+   it lives inside the launch bay's frame now. The badge stacks above the note
+   so the text never squeezes beside it on a narrow bay. */
+.bench-launch .bench-plan {
+  background: transparent;
+  border: none;
+  border-left: 3px solid var(--border-strong);
+  border-radius: 0;
+  padding: 2px 0 2px 12px;
+  margin-bottom: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
 }
 
 /* ---------- Configuration toolbar ---------- */
@@ -927,8 +1118,10 @@
 }
 
 @media (max-width: 900px) {
-  .bench-target { grid-template-columns: minmax(0, 1fr); }
-  .bench-reps-field .field-hint { display: none; }
+  /* Narrow screens stack the bay above the inputs and let it scroll with the
+     page — sticky only pays for itself when the columns sit side by side. */
+  .bench-workbench { grid-template-columns: minmax(0, 1fr); }
+  .bench-launch-sticky { position: static; }
 }
 
 /* ---------- History ---------- */
@@ -1106,6 +1299,58 @@
   border-top: 1px solid var(--border-soft);
   padding-top: 8px;
   margin-top: 2px;
+}
+
+/* ---------- The stats strip ---------- */
+
+/* One quiet row under the plan: the inputs a run is built from and the total
+   they add up to. Values first, labels under them, so scanning top-to-bottom
+   reads the numbers before the words. */
+.bench-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 130px), 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.bench-stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  padding: 10px 13px;
+}
+
+.bench-stat-card-value {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.bench-stat-card-label {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-faint);
+}
+
+.bench-stat-card.is-unknown .bench-stat-card-value {
+  color: var(--text-faint);
+}
+
+.bench-stat-card.is-strong .bench-stat-card-value {
+  color: var(--accent-blue);
+}
+
+.bench-stat-card.is-good .bench-stat-card-value {
+  color: var(--accent-green);
+}
+
+.bench-stat-card.is-bad .bench-stat-card-value {
+  color: var(--accent-red);
 }
 
 /* ---------- Tournament pairing ---------- */

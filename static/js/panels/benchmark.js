@@ -67,20 +67,21 @@ const MULTI = {
 
 const errorEl = document.getElementById("bench-error");
 const metaEl = document.getElementById("bench-meta");
-const cardsEl = document.getElementById("bench-cards");
-
 const promptsEl = document.getElementById("bench-prompts");
 const repetitionsEl = document.getElementById("bench-repetitions");
 const includeOutputEl = document.getElementById("bench-include-output");
+const cardsEl = document.getElementById("bench-cards");
 
 const modelListEl = document.getElementById("bench-models-list");
 const modelCountEl = document.getElementById("bench-model-count");
+const modelsBadgeEl = document.getElementById("bench-models-badge");
 
 const configListEl = document.getElementById("bench-config-list");
 const configCountEl = document.getElementById("bench-config-count");
 const addBtn = document.getElementById("btn-config-add");
 const importBtn = document.getElementById("btn-config-import");
 const clearBtn = document.getElementById("btn-config-clear");
+const promptCountEl = document.getElementById("bench-prompt-count");
 
 const pairingEl = document.getElementById("bench-pairing");
 const pairingRowsEl = document.getElementById("bench-pairing-rows");
@@ -186,57 +187,13 @@ function readPlan() {
   };
 }
 
-/** Paint the summary cards at the top of the tab. */
-function renderCards() {
-  const plan = readPlan();
-  const status = getOllamaStatus();
-  const serverUp = status ? status.running : null;
-
-  cardsEl.innerHTML = `
-    <div class="card">
-      <div class="card-label">${escapeHtml(t("bench.cardModels"))}</div>
-      <div class="card-value ${plan.models ? "" : "is-unknown"}" dir="ltr">${
-        plan.models || "—"
-      }</div>
-      <div class="card-sub">${escapeHtml(t("bench.cardModelsSub"))}</div>
-    </div>
-    <div class="card">
-      <div class="card-label">${escapeHtml(t("bench.cardConfigs"))}</div>
-      <div class="card-value" dir="ltr">${plan.configs}</div>
-      <div class="card-sub">${escapeHtml(t("bench.cardConfigsSub"))}</div>
-    </div>
-    <div class="card">
-      <div class="card-label">${escapeHtml(t("bench.cardPrompts"))}</div>
-      <div class="card-value" dir="ltr">${plan.prompts}</div>
-      <div class="card-sub">${escapeHtml(t("bench.cardPromptsSub"))}</div>
-    </div>
-    <div class="card">
-      <div class="card-label">${escapeHtml(t("bench.cardTotalRuns"))}</div>
-      <div class="card-value ${plan.runs > 0 ? "" : "is-unknown"}" dir="ltr">${
-        plan.runs || "—"
-      }</div>
-      <div class="card-sub">${escapeHtml(
-        plan.reps > 1
-          ? t("bench.cardTotalRunsRepsSub", { reps: plan.reps })
-          : t("bench.cardTotalRunsSub")
-      )}</div>
-    </div>
-    <div class="card">
-      <div class="card-label">${escapeHtml(t("bench.cardServer"))}</div>
-      ${
-        serverUp === null
-          ? '<div class="card-value is-unknown">—</div>'
-          : `<div class="card-value ${serverUp ? "is-good" : "is-bad"}">${escapeHtml(
-              t(serverUp ? "value.running" : "value.stopped")
-            )}</div>`
-      }
-      <div class="card-sub">${escapeHtml(
-        t(serverUp ? "bench.cardServerReady" : "bench.cardServerNotReady")
-      )}</div>
-    </div>`;
-}
-
-/** Paint the model tick-list from the installed models. */
+/**
+ * Paint the model tick-list from the installed models.
+ *
+ * The old summary cards are gone: the plan panel at the top of the tab carries
+ * the same counts, and the server status lives in its own tab, so the cards
+ * repeated what the page already said.
+ */
 function renderModelList() {
   const installed = getInstalledModels();
 
@@ -399,20 +356,88 @@ function renderPlan() {
     ${counts}`;
 }
 
+/**
+ * Paint the compact stats row under the plan: one line, four numbers — the
+ * inputs a run is built from and the total it adds up to. Deliberately a
+ * single quiet strip rather than a grid of cards, so the page carries one
+ * number display and the plan panel carries the words.
+ */
+/**
+ * Paint the four summary cards in the launch bay: model count, configuration
+ * count, total generations and the server state. The first three echo the
+ * inputs the plan was read from; the last answers whether the button can run.
+ */
+function renderStats() {
+  const plan = readPlan();
+  const status = getOllamaStatus();
+  const serverUp = status ? status.running : null;
+
+  const stats = [
+    {
+      label: t("bench.statModels"),
+      value: plan.models || "—",
+      tone: plan.models ? "" : "is-unknown",
+    },
+    {
+      label: t("bench.statConfigs"),
+      value: plan.configs || "—",
+      tone: "",
+    },
+    {
+      label: t("bench.statRuns"),
+      value: plan.runs || "—",
+      tone: plan.runs ? "is-strong" : "is-unknown",
+    },
+    {
+      label: t("bench.statServer"),
+      value:
+        serverUp === null
+          ? "—"
+          : t(serverUp ? "value.running" : "value.stopped"),
+      tone:
+        serverUp === null ? "is-unknown" : serverUp ? "is-good" : "is-bad",
+    },
+  ];
+
+  cardsEl.innerHTML = stats
+    .map(
+      (stat) => `
+        <div class="bench-stat-card ${stat.tone}">
+          <span class="bench-stat-card-value" dir="auto">${escapeHtml(
+            String(stat.value)
+          )}</span>
+          <span class="bench-stat-card-label">${escapeHtml(stat.label)}</span>
+        </div>`
+    )
+    .join("");
+}
+
 /** Refresh everything that depends on the current setup. */
 function renderSetup() {
   const configurations = getConfigurations();
+  const prompts = readPrompts();
 
   renderModelList();
   renderConfigList(configListEl);
   renderPairing();
-  renderCards();
   renderPlan();
+  renderStats();
 
   modelCountEl.textContent =
     selectedModels.length === 0
       ? t("bench.noModelsYet")
       : tn(selectedModels.length, "bench.modelReady", "bench.modelsReadyCount");
+
+  // The models card's badge echoes the count where the eye lands first, and
+  // turns amber the moment two or more models mean the run is a comparison.
+  modelsBadgeEl.textContent =
+    selectedModels.length === 0 ? "" : String(selectedModels.length);
+  modelsBadgeEl.classList.toggle("is-active", selectedModels.length > 1);
+
+  promptCountEl.textContent =
+    prompts.length === 0
+      ? t("bench.noPromptsYet")
+      : tn(prompts.length, "bench.promptReady", "bench.promptsReady");
 
   configCountEl.textContent =
     configurations.length === 0
@@ -1106,16 +1131,15 @@ function buildRequest(plan) {
 
   if (plan.models === 1) {
     // One model: the configuration comparison serves both the plain speed
-    // measurement (no configuration, so an empty options set stands in) and
-    // the configuration comparison.
+    // measurement (an empty list means the model's own defaults, which the
+    // server synthesizes into a "defaults" entry) and the configuration
+    // comparison.
     return {
       endpoints: SINGLE,
       payload: {
         ...shared,
         model: selectedModels[0],
-        configurations: configurations.length
-          ? configurations
-          : [{ name: t("bench.defaultConfigName"), options: {} }],
+        configurations,
       },
     };
   }
@@ -1201,13 +1225,19 @@ export async function initBenchmarkPanel() {
   bindRun();
 
   promptsEl.addEventListener("input", () => {
-    renderCards();
+    const count = readPrompts().length;
+
+    promptCountEl.textContent =
+      count === 0
+        ? t("bench.noPromptsYet")
+        : tn(count, "bench.promptReady", "bench.promptsReady");
+
     renderPlan();
+    renderStats();
     updateRunState();
   });
 
   repetitionsEl.addEventListener("input", () => {
-    renderCards();
     renderPlan();
     updateRunState();
   });

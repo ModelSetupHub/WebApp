@@ -1,6 +1,8 @@
-{# Benchmark tab: one set of inputs — prompts, models, configurations — from
-   which the test kind follows. The plan panel names that kind and the run
-   button dispatches to whichever comparison it implies. #}
+{# Benchmark tab, rebuilt around one idea: the page is a single workbench.
+   Left column — what the test is made of (models, prompts, configurations),
+   each in its own numbered card. Right column — a sticky launch bay where the
+   derived test plan, the live numbers and the run button never scroll away.
+   Results and history flow underneath, full width. #}
 <section id="benchmark" class="panel-section" aria-labelledby="benchmark-title">
   <header class="section-head">
     <div class="section-heading">
@@ -21,204 +23,211 @@
 
   <div class="alert is-hidden" id="bench-error" role="alert"></div>
 
-  <div class="card-grid" id="bench-cards"></div>
+  {# ---------- The workbench: inputs left, launch bay right ---------- #}
+  <div class="bench-workbench">
 
-  {# ---------- 1 · Prompts ---------- #}
-  <div class="subsection">
-    <h2 class="subsection-title" data-i18n="bench.step1">1 · Prompts</h2>
+    {# ----- Left: the three inputs ----- #}
+    <div class="bench-inputs">
 
-    <div class="bench-target">
-      <label class="field">
-        <span class="field-label" data-i18n="bench.prompts">Prompts</span>
-        <textarea class="input" id="bench-prompts" rows="7"
-                  data-i18n-placeholder="bench.promptsPlaceholder"></textarea>
-        <span class="field-hint" data-i18n="bench.promptsHint">
-          Separate prompts with a blank line. Every model and configuration
-          answers all of them, and the model is preloaded before each so load
-          time never lands in the timings.
-        </span>
-      </label>
-
-      <label class="field bench-reps-field">
-        <span class="field-label" data-i18n="bench.repetitions">Repetitions</span>
-        <input class="input is-ltr" id="bench-repetitions" type="number" dir="ltr"
-               min="1" max="10" step="1" value="1" inputmode="numeric">
-        <span class="field-hint" data-i18n="bench.repetitionsHint">
-          Each prompt runs this many times; results average the runs and report
-          how far they spread, so a real difference can be told apart from noise.
-        </span>
-      </label>
-    </div>
-  </div>
-
-  {# ---------- 2 · Models ---------- #}
-  <div class="subsection">
-    <h2 class="subsection-title" data-i18n="bench.step2">2 · Models</h2>
-
-    <div class="bench-toolbar">
-      <div class="bench-toolbar-text">
-        <span class="bench-toolbar-title" id="bench-model-count" data-i18n="bench.noModelsYet">
-          No model selected
-        </span>
-        <span class="bench-toolbar-note" data-i18n="bench.modelsToolbarNote">
-          One model measures that model. Two or more compare them against each
-          other, one at a time so they never share the GPU.
-        </span>
-      </div>
-    </div>
-
-    <div class="bench-models-panel">
-      <div class="bench-models-list" id="bench-models-list"></div>
-    </div>
-  </div>
-
-  {# ---------- 3 · Configurations ---------- #}
-  <div class="subsection">
-    <h2 class="subsection-title" data-i18n="bench.step3">3 · Configurations</h2>
-
-    <div class="bench-toolbar">
-      <div class="bench-toolbar-text">
-        <span class="bench-toolbar-title" id="bench-config-count" data-i18n="bench.noConfigsYet">
-          No configurations yet
-        </span>
-        <span class="bench-toolbar-note" data-i18n="bench.toolbarNote">
-          Optional: with none, every model runs under its own defaults. Add them
-          by hand, or upload a configuration file.
-        </span>
-      </div>
-
-      <div class="bench-toolbar-actions">
-        <button type="button" class="btn btn-primary" id="btn-config-add" data-i18n="bench.addConfig">
-          Add configuration
-        </button>
-        <button type="button" class="btn" id="btn-config-import" data-i18n="bench.uploadFile">
-          Upload file
-        </button>
-        <button type="button" class="btn btn-danger" id="btn-config-clear" data-i18n="bench.clearAll" disabled>
-          Clear all
-        </button>
-      </div>
-    </div>
-
-    {# Import drawer: drop zone, file picker and a paste box, with a preview of
-       what was understood before anything is applied. #}
-    <div class="bench-drawer is-hidden" id="bench-import" role="group"
-         aria-labelledby="bench-import-title">
-      <div class="bench-drawer-head">
-        <h3 class="bench-drawer-title" id="bench-import-title" data-i18n="bench.importTitle">
-          Upload configurations
-        </h3>
-        <button type="button" class="btn btn-sm" id="btn-import-close" data-i18n="btn.close">Close</button>
-      </div>
-
-      <div class="bench-import-body">
-        <div class="bench-dropzone" id="bench-dropzone" tabindex="0" role="button"
-             aria-describedby="bench-dropzone-hint">
-          <span class="bench-dropzone-glyph" aria-hidden="true">▦</span>
-          <span class="bench-dropzone-text" data-i18n-html="bench.dropzoneText"></span>
-          <span class="bench-dropzone-hint" id="bench-dropzone-hint"
-                data-i18n-html="bench.dropzoneHint"></span>
-          <input type="file" id="bench-file" accept=".json,application/json" class="bench-file">
+      {# 1 · Models #}
+      <div class="bench-card" id="bench-card-models">
+        <div class="bench-card-head">
+          <span class="bench-card-step" aria-hidden="true">1</span>
+          <div class="bench-card-titles">
+            <span class="bench-card-title" data-i18n="bench.step2">Models</span>
+            <span class="bench-card-sub" id="bench-model-count" data-i18n="bench.noModelsYet">
+              No model selected
+            </span>
+          </div>
+          <span class="bench-card-badge" id="bench-models-badge" aria-live="polite"></span>
         </div>
 
-        <div class="bench-paste">
-          <label class="field">
-            <span class="field-label" data-i18n="bench.pasteLabel">…or paste the configuration</span>
-            {# JSON is always left-to-right, whatever the interface language is. #}
-            <textarea class="input is-ltr" id="bench-paste-text" rows="8" dir="ltr" spellcheck="false"
-              placeholder='{
+        <div class="bench-models-list" id="bench-models-list"></div>
+
+        <p class="bench-card-hint" data-i18n="bench.modelsHint">
+          One model measures that model. Two or more race against each other,
+          one at a time so they never share the GPU.
+        </p>
+      </div>
+
+      {# 2 · Prompts #}
+      <div class="bench-card">
+        <div class="bench-card-head">
+          <span class="bench-card-step" aria-hidden="true">2</span>
+          <div class="bench-card-titles">
+            <span class="bench-card-title" data-i18n="bench.step1">Prompts</span>
+            <span class="bench-card-sub" id="bench-prompt-count" data-i18n="bench.noPromptsYet">
+              No prompts written
+            </span>
+          </div>
+        </div>
+
+        <textarea class="input" id="bench-prompts" rows="6"
+                  data-i18n-placeholder="bench.promptsPlaceholder"></textarea>
+
+        <div class="bench-card-inline">
+          <label class="field bench-reps-field">
+            <span class="field-label" data-i18n="bench.repetitions">Repetitions</span>
+            <input class="input is-ltr" id="bench-repetitions" type="number" dir="ltr"
+                   min="1" max="10" step="1" value="1" inputmode="numeric">
+          </label>
+          <p class="bench-card-hint" data-i18n="bench.repetitionsHint">
+            Each prompt runs this many times; results average the runs and
+            report their spread, so a real difference separates from noise.
+          </p>
+        </div>
+      </div>
+
+      {# 3 · Configurations #}
+      <div class="bench-card">
+        <div class="bench-card-head">
+          <span class="bench-card-step" aria-hidden="true">3</span>
+          <div class="bench-card-titles">
+            <span class="bench-card-title" data-i18n="bench.step3">Configurations</span>
+            <span class="bench-card-sub" id="bench-config-count" data-i18n="bench.noConfigsYet">
+              No configurations yet
+            </span>
+          </div>
+          <div class="bench-card-actions">
+            <button type="button" class="btn btn-sm btn-primary" id="btn-config-add" data-i18n="bench.addConfig">
+              Add
+            </button>
+            <button type="button" class="btn btn-sm" id="btn-config-import" data-i18n="bench.uploadFile">
+              Upload
+            </button>
+            <button type="button" class="btn btn-sm btn-danger" id="btn-config-clear" data-i18n="bench.clearAll" disabled>
+              Clear
+            </button>
+          </div>
+        </div>
+
+        {# Import drawer #}
+        <div class="bench-drawer is-hidden" id="bench-import" role="group"
+             aria-labelledby="bench-import-title">
+          <div class="bench-drawer-head">
+            <h3 class="bench-drawer-title" id="bench-import-title" data-i18n="bench.importTitle">
+              Upload configurations
+            </h3>
+            <button type="button" class="btn btn-sm" id="btn-import-close" data-i18n="btn.close">Close</button>
+          </div>
+
+          <div class="bench-import-body">
+            <div class="bench-dropzone" id="bench-dropzone" tabindex="0" role="button"
+                 aria-describedby="bench-dropzone-hint">
+              <span class="bench-dropzone-glyph" aria-hidden="true">▦</span>
+              <span class="bench-dropzone-text" data-i18n-html="bench.dropzoneText"></span>
+              <span class="bench-dropzone-hint" id="bench-dropzone-hint"
+                    data-i18n-html="bench.dropzoneHint"></span>
+              <input type="file" id="bench-file" accept=".json,application/json" class="bench-file">
+            </div>
+
+            <div class="bench-paste">
+              <label class="field">
+                <span class="field-label" data-i18n="bench.pasteLabel">…or paste the configuration</span>
+                <textarea class="input is-ltr" id="bench-paste-text" rows="8" dir="ltr" spellcheck="false"
+                  placeholder='{
   "configurations": [
     { "name": "baseline", "options": { "temperature": 0.7, "num_ctx": 4096 } },
     { "name": "long-context", "options": { "temperature": 0.7, "num_ctx": 16384 } }
   ]
 }'></textarea>
-          </label>
-          <div class="form-foot">
-            <button type="button" class="btn" id="btn-paste-check" data-i18n="btn.check">Check</button>
+              </label>
+              <div class="form-foot">
+                <button type="button" class="btn" id="btn-paste-check" data-i18n="btn.check">Check</button>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
 
-      <div class="bench-import-preview is-hidden" id="bench-import-preview" aria-live="polite"></div>
+          <div class="bench-import-preview is-hidden" id="bench-import-preview" aria-live="polite"></div>
+        </div>
+
+        {# Editor drawer #}
+        <form class="bench-drawer is-hidden" id="bench-editor" novalidate
+              aria-labelledby="bench-editor-title">
+          <div class="bench-drawer-head">
+            <h3 class="bench-drawer-title" id="bench-editor-title" data-i18n="bench.editorAdd">
+              Add a configuration
+            </h3>
+            <button type="button" class="btn btn-sm" id="btn-editor-close" data-i18n="btn.close">Close</button>
+          </div>
+
+          <label class="field bench-editor-name">
+            <span class="field-label" data-i18n="bench.fieldName">Name</span>
+            <input class="input is-ltr" id="bench-editor-name-input" dir="ltr" placeholder="baseline"
+                   autocomplete="off" spellcheck="false">
+            <span class="field-hint" data-i18n="bench.nameHint">
+              Shown in the results table.
+            </span>
+          </label>
+
+          <div id="bench-editor-groups"></div>
+
+          <div class="bench-editor-foot">
+            <span class="bench-editor-count" id="bench-editor-count" aria-live="polite"></span>
+            <div class="btn-row btn-row-wide">
+              <button type="button" class="btn" id="btn-editor-reset" data-i18n="btn.reset">Reset</button>
+              <button type="submit" class="btn btn-primary" id="btn-editor-save" data-i18n="btn.save">Save</button>
+            </div>
+          </div>
+        </form>
+
+        <div class="bench-config-grid" id="bench-config-list"></div>
+
+        {# Tournament pairing: only visible when the plan is one #}
+        <div class="bench-pairing is-hidden" id="bench-pairing">
+          <div class="bench-pairing-head">
+            <span class="bench-pairing-title" data-i18n="bench.pairingTitle">
+              Configuration per model
+            </span>
+            <span class="bench-pairing-note" data-i18n="bench.pairingNote">
+              Several models and several configurations: give each model the one
+              it races under.
+            </span>
+          </div>
+          <div class="bench-pairing-rows" id="bench-pairing-rows"></div>
+        </div>
+
+        <p class="bench-card-hint" data-i18n="bench.configsHint">
+          Optional. With none, every model runs under its own defaults — that is
+          the plain speed test.
+        </p>
+      </div>
     </div>
 
-    {# Editor drawer: one configuration at a time, fields grouped so the long
-       option list stays scannable. #}
-    <form class="bench-drawer is-hidden" id="bench-editor" novalidate
-          aria-labelledby="bench-editor-title">
-      <div class="bench-drawer-head">
-        <h3 class="bench-drawer-title" id="bench-editor-title" data-i18n="bench.editorAdd">
-          Add a configuration
-        </h3>
-        <button type="button" class="btn btn-sm" id="btn-editor-close" data-i18n="btn.close">Close</button>
-      </div>
-
-      <label class="field bench-editor-name">
-        <span class="field-label" data-i18n="bench.fieldName">Name</span>
-        <input class="input is-ltr" id="bench-editor-name-input" dir="ltr" placeholder="baseline"
-               autocomplete="off" spellcheck="false">
-        <span class="field-hint" data-i18n="bench.nameHint">
-          Shown in the results table.
-        </span>
-      </label>
-
-      <div id="bench-editor-groups"></div>
-
-      <div class="bench-editor-foot">
-        <span class="bench-editor-count" id="bench-editor-count" aria-live="polite"></span>
-        <div class="btn-row btn-row-wide">
-          <button type="button" class="btn" id="btn-editor-reset" data-i18n="btn.reset">Reset</button>
-          <button type="submit" class="btn btn-primary" id="btn-editor-save" data-i18n="btn.save">Save</button>
+    {# ----- Right: the launch bay ----- #}
+    <aside class="bench-launch" aria-label="Run">
+      <div class="bench-launch-sticky">
+        <div class="bench-launch-head">
+          <span class="bench-launch-title" data-i18n="bench.launchTitle">Run</span>
+          <span class="scan-meta" id="bench-meta" aria-live="polite"></span>
         </div>
-      </div>
-    </form>
 
-    <div class="bench-config-grid" id="bench-config-list"></div>
+        <div class="bench-plan" id="bench-plan" aria-live="polite"></div>
 
-    {# Pairing table: only for the tournament, where each model runs under its
-       own configuration rather than a shared one. #}
-    <div class="bench-pairing is-hidden" id="bench-pairing">
-      <div class="bench-pairing-head">
-        <span class="bench-pairing-title" data-i18n="bench.pairingTitle">
-          Configuration per model
-        </span>
-        <span class="bench-pairing-note" data-i18n="bench.pairingNote">
-          Several models and several configurations: give each model the one it
-          races under.
-        </span>
-      </div>
-      <div class="bench-pairing-rows" id="bench-pairing-rows"></div>
-    </div>
-  </div>
+        <div class="bench-stats" id="bench-cards"></div>
 
-  {# ---------- 4 · Plan and run ---------- #}
-  <div class="subsection">
-    <h2 class="subsection-title" data-i18n="bench.step4">4 · Run</h2>
-
-    <div class="bench-plan" id="bench-plan" aria-live="polite"></div>
-
-    <div class="control-bar">
-      <div class="control-text">
-        <span class="control-title" id="bench-run-state" data-i18n="bench.nothingToRun">
-          Nothing to run yet
-        </span>
-        <span class="control-note" id="bench-run-note" data-i18n="bench.nothingToRunNote">
-          Write at least one prompt and pick at least one model.
-        </span>
-      </div>
-
-      <div class="bench-run-actions">
-        <label class="bench-switch">
+        <label class="bench-switch bench-launch-switch">
           <input type="checkbox" id="bench-include-output">
           <span class="bench-switch-label" data-i18n="bench.keepOutput">Keep generated text</span>
         </label>
-        <button type="button" class="btn btn-primary" id="btn-bench-run" data-i18n="bench.runComparison" disabled>
+
+        <button type="button" class="btn btn-primary btn-block" id="btn-bench-run"
+                data-i18n="bench.runComparison" disabled>
           Run benchmark
         </button>
-      </div>
-    </div>
 
-    <div class="bench-progress is-hidden" id="bench-progress" aria-live="polite"></div>
+        <div class="bench-run-note-pair">
+          <span class="control-title" id="bench-run-state" data-i18n="bench.nothingToRun">
+            Nothing to run yet
+          </span>
+          <span class="control-note" id="bench-run-note" data-i18n="bench.nothingToRunNote">
+            Write at least one prompt and pick at least one model.
+          </span>
+        </div>
+
+        <div class="bench-progress is-hidden" id="bench-progress" aria-live="polite"></div>
+      </div>
+    </aside>
   </div>
 
   {# ---------- Results ---------- #}
@@ -231,8 +240,6 @@
   </div>
 
   {# ---------- History ---------- #}
-  {# Finished runs are auto-saved by the service; this collapsible section keeps
-     them out of the way until the user asks for them. #}
   <div class="subsection">
     <h2 class="subsection-title" data-i18n="bench.historyTitle">History</h2>
 

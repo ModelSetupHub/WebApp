@@ -425,6 +425,27 @@ export const STRINGS = {
   "bench.noModelsYet": { en: "No model selected", fa: "مدلی انتخاب نشده" },
   "bench.modelReady": { en: "1 model selected", fa: "۱ مدل انتخاب شده" },
   "bench.modelsReadyCount": { en: "{n} models selected", fa: "{n} مدل انتخاب شده" },
+  "bench.noPromptsYet": { en: "No prompts written", fa: "پرامپتی نوشته نشده" },
+  "bench.promptReady": { en: "1 prompt ready", fa: "۱ پرامپت آماده" },
+  "bench.promptsReady": { en: "{n} prompts ready", fa: "{n} پرامپت آماده" },
+  "bench.promptsReadyCount": { en: "{n} prompts ready", fa: "{n} پرامپت آماده" },
+  "bench.launchTitle": { en: "Run", fa: "اجرا" },
+  "bench.modelsHint": {
+    en:
+      "One model measures that model. Two or more race against each other, " +
+      "one at a time so they never share the GPU.",
+    fa:
+      "یک مدل، همان مدل را می‌سنجد. دو مدل یا بیشتر با هم مسابقه می‌دهند و " +
+      "یکی‌یکی اجرا می‌شوند تا GPU را با هم شریک نشوند.",
+  },
+  "bench.configsHint": {
+    en:
+      "Optional. With none, every model runs under its own defaults — that is " +
+      "the plain speed test.",
+    fa:
+      "اختیاری. با هیچ تنظیمی، هر مدل با پیش‌فرض‌های خودش اجرا می‌شود — همان " +
+      "تست ساده‌ی سرعت.",
+  },
   "bench.modelsToolbarNote": {
     en:
       "One model measures that model. Two or more compare them against each " +
@@ -654,6 +675,11 @@ export const STRINGS = {
     fa: "در هر اجرا پاسخ داده می‌شوند",
   },
   "bench.cardTotalRuns": { en: "Total runs", fa: "کل اجراها" },
+  "bench.statModels": { en: "models", fa: "مدل" },
+  "bench.statConfigs": { en: "configs", fa: "تنظیم" },
+  "bench.statPrompts": { en: "prompts", fa: "پرامپت" },
+  "bench.statRuns": { en: "generations", fa: "تولید" },
+  "bench.statServer": { en: "server", fa: "سرور" },
   "bench.cardTotalRunsSub": {
     en: "generations this comparison performs",
     fa: "تعداد تولیدهای این مقایسه",

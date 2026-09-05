@@ -80,7 +80,11 @@ def api_benchmark_parse():
 
 @blueprint.route("/run", methods=["POST"])
 def api_benchmark_run():
-    """Start a comparison across every supplied configuration."""
+    """Start a comparison across every supplied configuration.
+
+    An empty configuration list is the plain speed test: the model runs once
+    under its own defaults, and the row in the results is named for that.
+    """
     payload = body()
     model = (payload.get("model") or "").strip()
 
@@ -89,7 +93,11 @@ def api_benchmark_run():
 
     try:
         prompts = normalize_prompts(payload.get("prompts"))
-        configurations = normalize_configurations(payload.get("configurations"))
+        configurations = (
+            normalize_configurations(payload.get("configurations"))
+            if payload.get("configurations")
+            else [{"name": "defaults", "options": {}}]
+        )
         repetitions = normalize_repetitions(payload.get("repetitions"))
     except ConfigError as error:
         return fail(str(error), 400)
