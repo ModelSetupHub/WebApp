@@ -1,4 +1,4 @@
-"""API routes for the Benchmark tab, backed by ``MSHCore.ollama.experiment``.
+"""API routes for the Benchmark tab, backed by ``MSHCore.benchmark.ollama_runner``.
 
 ``compare_tests`` is the only core function this tab drives. It blocks for as
 long as every configuration takes to answer every prompt, so it runs in a

@@ -1,7 +1,7 @@
 """Background execution of multi-configuration Ollama comparisons.
 
-``MSHCore.ollama.experiment.compare_tests`` runs every configuration against every
-prompt in a single blocking call that can take minutes, so it is driven from a
+``MSHCore.benchmark.ollama_runner.compare_tests`` runs every configuration against
+every prompt in a single blocking call that can take minutes, so it is driven from a
 worker thread and the browser polls for the outcome instead of holding a request
 open.
 
@@ -16,7 +16,7 @@ import time
 import uuid
 
 from MSHCore.cancellation import CancellationToken, OperationCancelled
-from MSHCore.ollama import experiment
+from MSHCore.benchmark import ollama_runner
 
 _lock = threading.Lock()
 _job: dict | None = None
@@ -64,7 +64,7 @@ def _work(job: dict) -> None:
         job: Internal job record to fill in.
     """
     try:
-        result = experiment.compare_tests(
+        result = ollama_runner.compare_tests(
             model=job["model"],
             prompts=job["prompts"],
             configurations=job["configurations"],
