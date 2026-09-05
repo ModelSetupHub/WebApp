@@ -797,6 +797,68 @@ export const STRINGS = {
     fa: "بارگذاری تاریخچه ناموفق بود — {error}",
   },
   "bench.savedToHistory": { en: "saved to history", fa: "در تاریخچه ذخیره شد" },
+
+  // ---------- Benchmark: model comparison ----------
+  "bench.resultsHeadModels": {
+    en: "{n} model(s) compared",
+    fa: "{n} مدل مقایسه شد",
+  },
+  "bench.modelsTitle": {
+    en: "Or compare models instead",
+    fa: "یا مدل‌ها را مقایسه کنید",
+  },
+  "bench.modelsNote": {
+    en:
+      "Same prompts, one shared configuration, several models — find out " +
+      "which one suits this machine.",
+    fa:
+      "همان پرامپت‌ها، یک تنظیم مشترک، چند مدل — ببینید کدام برای این سیستم " +
+      "مناسب‌تر است.",
+  },
+  "bench.modelsOpen": { en: "Open model comparison", fa: "باز کردن مقایسه‌ی مدل‌ها" },
+  "bench.modelsDrawerTitle": { en: "Model comparison", fa: "مقایسه‌ی مدل‌ها" },
+  "bench.modelsPick": { en: "Models to compare", fa: "مدل‌های مورد مقایسه" },
+  "bench.modelsPickHint": {
+    en: "Two to six installed models, measured in the order chosen.",
+    fa: "دو تا شش مدل نصب‌شده، به ترتیب انتخاب اندازه‌گیری می‌شوند.",
+  },
+  "bench.modelsPrompts": { en: "Prompts", fa: "پرامپت‌ها" },
+  "bench.modelsRepetitionsHint": {
+    en: "Each prompt runs this many times against every model.",
+    fa: "هر پرامپت این تعداد بار روی هر مدل اجرا می‌شود.",
+  },
+  "bench.modelsConfig": { en: "Shared configuration", fa: "تنظیم مشترک" },
+  "bench.modelsConfigHint": {
+    en:
+      "One JSON object of Ollama options, applied to every model. Empty " +
+      "means every model keeps its defaults.",
+    fa:
+      "یک آبجکت JSON از گزینه‌های Ollama که به همه‌ی مدل‌ها اعمال می‌شود. " +
+      "خالی یعنی هر مدل پیش‌فرض‌های خودش را دارد.",
+  },
+  "bench.modelsRun": { en: "Run model comparison", fa: "اجرای مقایسه‌ی مدل‌ها" },
+  "bench.modelsNoneInstalled": {
+    en: "No installed models found — pull one first.",
+    fa: "مدلی یافت نشد — اول یک مدل بگیرید.",
+  },
+  "bench.modelsMissing": { en: "fewer than two models are ticked", fa: "کمتر از دو مدل تیک خورده" },
+  "bench.modelsConfigInvalid": {
+    en: "the shared configuration is not valid JSON",
+    fa: "تنظیم مشترک JSON معتبر نیست",
+  },
+  "bench.modelsReady": {
+    en: "Ready: {n} generation(s) across {count} model(s).",
+    fa: "آماده: {n} بار تولید روی {count} مدل.",
+  },
+  "bench.modelsProgressText": {
+    en: "Running {runs} generation(s) across {models} model(s).",
+    fa: "اجرای {runs} تولید روی {models} مدل.",
+  },
+  "bench.modelsProgressStarting": {
+    en: "Preparing the run — loading the first model…",
+    fa: "آماده‌سازی اجرا — بارگذاری اولین مدل…",
+  },
+  "bench.modelsFinished": { en: "Model comparison finished", fa: "مقایسه‌ی مدل‌ها تمام شد" },
   "bench.verdictWithinNoise": {
     en:
       "The gap to the next configuration is within measurement noise — either " +

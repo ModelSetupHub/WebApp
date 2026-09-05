@@ -479,8 +479,24 @@ function detail(test, position) {
  * @param {HTMLElement} el Container element.
  * @param {object} job Finished job snapshot from the status endpoint.
  */
-export function renderResults(el, job) {
-  const tests = (job.result && job.result.tests) || [];
+/**
+ * Paint a finished comparison.
+ *
+ * Both comparison kinds land here: a configuration comparison (one model,
+ * several configurations) and a cross-model one (several models, one shared
+ * configuration). Core's result shape is the same for the two — a tests list
+ * whose entries carry per-prompt rows and a summary — so the only real
+ * difference is which title the results head shows.
+ *
+ * @param {HTMLElement} el Container element.
+ * @param {object} job Finished job snapshot from the status endpoint.
+ * @param {object} [options] Behaviour switches. discardEndpoint is the clear
+ *     endpoint the discard button posts to — the cross-model drawer passes
+ *     its own, since the two jobs live on different endpoints.
+ */
+export function renderResults(el, job, { discardEndpoint = "/api/benchmark/clear" } = {}) {
+  const result = job.result || {};
+  const tests = result.tests || [];
 
   if (tests.length === 0) {
     el.innerHTML = `<div class="empty-state">${escapeHtml(t("bench.noResults"))}</div>`;
@@ -489,16 +505,17 @@ export function renderResults(el, job) {
 
   deriveTtftAverages(tests);
 
-  const significance = job.result.significance || null;
+  const significance = result.significance || null;
   const reps = job.repetitions || 1;
+  const head = job.cross_model
+    ? t("bench.resultsHeadModels", { n: tests.length })
+    : t("bench.resultsHead", { model: result.model, n: tests.length });
 
   el.innerHTML = `
     <div class="bench-results">
       <div class="bench-results-head">
         <div>
-          <div class="bench-results-title">${escapeHtml(
-            t("bench.resultsHead", { model: job.result.model, n: tests.length })
-          )}</div>
+          <div class="bench-results-title">${escapeHtml(head)}</div>
           <div class="bench-results-sub">${escapeHtml(
             t("bench.resultsSub", {
               prompts: job.prompts.length,
@@ -510,7 +527,7 @@ export function renderResults(el, job) {
         </div>
         <div class="btn-row">
           ${job.history_id ? `<span class="chip">${escapeHtml(t("bench.savedToHistory"))}</span>` : ""}
-          <button type="button" class="btn btn-sm" id="btn-bench-discard">${escapeHtml(
+          <button type="button" class="btn btn-sm" data-results-discard>${escapeHtml(
             t("bench.discardResults")
           )}</button>
         </div>
@@ -532,4 +549,8 @@ export function renderResults(el, job) {
       head.setAttribute("aria-expanded", open ? "true" : "false");
     });
   });
+
+  return {
+    discardButton: el.querySelector("[data-results-discard]"),
+  };
 }

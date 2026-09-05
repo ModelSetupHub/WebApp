@@ -1,18 +1,16 @@
-"""Background execution of multi-configuration Ollama comparisons.
+"""Background execution of cross-model comparisons.
 
-``MSHCore.benchmark.ollama_runner.compare_tests`` runs every configuration against
-every prompt in a single blocking call that can take minutes, so it is driven from a
-worker thread and the browser polls for the outcome instead of holding a request
-open.
+``MSHCore.benchmark.ollama_runner.compare_models`` benchmarks several models
+over the same prompts and one shared configuration, unloading each model
+before the next loads so their timings never share a GPU. Like the
+configuration comparison, it runs on a worker thread and the browser polls.
 
-Only one comparison is kept at a time. Two running at once would contend for the
-same GPU and make every timing in both meaningless, so a second request is
-refused rather than queued.
-
-A comparison that finishes successfully is saved into the toolkit's benchmark
-history (see ``MSHCore.benchmark.history``), so reloads and restarts do not
-erase what a run measured. Saving is best-effort: a history failure is logged
-and dropped, since the live result is what the page is showing anyway.
+The two comparison kinds share one GPU, so they share the busy gate too: a
+model comparison and a configuration comparison refuse to run at the same
+time, whichever started first. Their jobs are kept apart — a model
+comparison's result is rendered by the same results page, keyed by whether
+the job is cross-model — and a finished model comparison is saved into the
+benchmark history like any other run.
 """
 
 from datetime import datetime
@@ -21,8 +19,8 @@ import time
 import uuid
 
 from MSHCore.benchmark import history as benchmark_history
-from MSHCore.cancellation import CancellationToken, OperationCancelled
 from MSHCore.benchmark import ollama_runner
+from MSHCore.cancellation import CancellationToken, OperationCancelled
 from MSHCore.logging import write_log
 
 _lock = threading.Lock()
@@ -31,11 +29,24 @@ _job: dict | None = None
 ACTIVE_STATUS = "running"
 
 
+def status() -> dict | None:
+    """Return the current model-comparison job, if one exists.
+
+    Returns:
+        dict | None: The job snapshot, or None when no model comparison has
+        been started since the server started.
+    """
+    with _lock:
+        return _snapshot(_job) if _job is not None else None
+
+
 def _snapshot(job: dict) -> dict:
     """Build the browser-facing view of a job.
 
-    Elapsed time is derived on read rather than stored, so a running job reports
-    a live duration without the worker having to tick anything.
+    The shape matches the configuration comparison's snapshot — same status
+    names, same progress record — except the job is flagged cross-model and
+    carries the model list instead of a single model, so one renderer can
+    serve both.
 
     Args:
         job: Internal job record.
@@ -51,7 +62,9 @@ def _snapshot(job: dict) -> dict:
     return {
         "id": job["id"],
         "status": job["status"],
-        "model": job["model"],
+        "cross_model": True,
+        "models": job["models"],
+        "model": None,
         "prompts": job["prompts"],
         "configurations": job["configurations"],
         "include_output": job["include_output"],
@@ -70,15 +83,11 @@ def _snapshot(job: dict) -> dict:
 def _record_progress(job: dict, step: dict) -> None:
     """Turn one Core progress step into the job's browser-facing progress.
 
-    Core reports which configuration, prompt and repetition a step belongs to
-    and how many steps the whole comparison has finished; this adds the share
-    those steps make of the total, which is what a progress bar draws.
-
     Args:
         job: The running job the comparison belongs to.
         step: One progress step as Core's callback delivered it.
     """
-    steps_total = step["configuration_count"] * step["prompt_count"] * job["repetitions"]
+    steps_total = step["model_count"] * step["prompt_count"] * job["repetitions"]
     steps_done = step["completed"]
 
     with _lock:
@@ -89,9 +98,9 @@ def _record_progress(job: dict, step: dict) -> None:
             ),
             "steps_done": steps_done,
             "steps_total": steps_total,
-            "configuration": step.get("configuration"),
-            "configuration_index": step["configuration_index"],
-            "configuration_count": step["configuration_count"],
+            "configuration": step.get("model"),
+            "configuration_index": step["model_index"],
+            "configuration_count": step["model_count"],
             "prompt_index": step["prompt_index"],
             "prompt_count": step["prompt_count"],
             "repetition": step["repetition"],
@@ -100,24 +109,22 @@ def _record_progress(job: dict, step: dict) -> None:
 
 
 def _work(job: dict) -> None:
-    """Run one comparison to completion and record its outcome.
+    """Run one model comparison to completion and record its outcome.
 
     Args:
         job: Internal job record to fill in.
     """
     try:
-        result = ollama_runner.compare_tests(
-            model=job["model"],
+        result = ollama_runner.compare_models(
+            models=job["models"],
             prompts=job["prompts"],
-            configurations=job["configurations"],
+            config=job["config"],
             include_output=job["include_output"],
             cancellation=job["token"],
             repetitions=job["repetitions"],
             on_progress=lambda step: _record_progress(job, step),
         )
     except OperationCancelled:
-        # Core discards partial results and unloads the model it loaded, so a
-        # cancelled run leaves nothing behind but its log entry.
         outcome = {
             "status": "cancelled",
             "error": None,
@@ -142,8 +149,6 @@ def _work(job: dict) -> None:
         job["finished_at"] = datetime.now().strftime("%H:%M:%S")
 
         if outcome["status"] == "done" and job.get("progress"):
-            # The comparison completed, so the bar reads full rather than
-            # stopping at whatever the last progress step happened to land on.
             job["progress"] = {
                 **job["progress"],
                 "percent": 100.0,
@@ -151,8 +156,6 @@ def _work(job: dict) -> None:
             }
 
     if outcome["status"] == "done":
-        # Outside the lock: the store touches the filesystem, and the job is
-        # already visible as finished to any poller.
         saved_id = None
 
         try:
@@ -162,7 +165,7 @@ def _work(job: dict) -> None:
                 level="WARNING",
                 component="webapp/benchmark",
                 action="history_save",
-                message="Saving the finished comparison to history failed",
+                message="Saving the finished model comparison to history failed",
                 details={"error": str(error)},
             )
 
@@ -170,28 +173,41 @@ def _work(job: dict) -> None:
             job["history_id"] = saved_id
 
 
+def job_is_running() -> bool:
+    """Report whether a model comparison is holding the GPU right now.
+
+    The configuration-comparison service asks the same question before
+    starting its own run: two comparisons at once would contend for the GPU
+    and make every timing in both meaningless, whichever kind they are.
+
+    Returns:
+        bool: True while a model comparison is in flight.
+    """
+    with _lock:
+        return _job is not None and _job["status"] == ACTIVE_STATUS
+
+
 def start(
-    model: str,
+    models: list[str],
     prompts: list[str],
-    configurations: list[dict],
+    config: dict | None = None,
     include_output: bool = False,
     repetitions: int = 1,
 ) -> dict:
-    """Begin a comparison in the background, replacing any finished one.
+    """Begin a model comparison in the background, replacing any finished one.
 
     Args:
-        model: Ollama model every configuration is tested against.
-        prompts: Prompt strings sent to each configuration.
-        configurations: Dicts holding a ``name`` and an ``options`` dict.
+        models: Model names to compare, in run order.
+        prompts: Prompt strings every model answers.
+        config: Generation parameters shared by every model.
         include_output: Keep the generated text in the results.
-        repetitions: How many times every prompt runs per configuration, from
-            1. Results average the runs and report their noise.
+        repetitions: How many times every prompt runs per model, from 1.
 
     Returns:
         dict: Snapshot of the newly started job.
 
     Raises:
-        RuntimeError: If a comparison is already running.
+        RuntimeError: If a comparison of either kind is already running.
     """
     global _job
 
@@ -202,35 +218,38 @@ def start(
                 "starting another."
             )
 
-        # The GPU is shared with the model-comparison service: a cross-model
-        # run in flight forbids a configuration run exactly as the reverse
-        # does. Imported here so the two services can point at each other's
-        # state without an import cycle at module load.
-        from . import model_compare
+        # The GPU is shared with the configuration-comparison service, which
+        # asks the same question of this module. Imported here so the two
+        # services can check each other's state without an import cycle.
+        from . import benchmark
 
-        if model_compare.job_is_running():
+        if benchmark.job_is_running():
             raise RuntimeError(
-                "A model comparison is already running. Wait for it to finish "
-                "before starting another."
+                "A comparison is already running. Wait for it to finish before "
+                "starting another."
             )
 
         _job = {
             "id": uuid.uuid4().hex[:12],
             "status": ACTIVE_STATUS,
-            "model": model,
+            "models": models,
             "prompts": prompts,
-            "configurations": configurations,
+            "config": dict(config or {}),
+            "configurations": [
+                {"name": model, "options": dict(config or {})}
+                for model in models
+            ],
             "include_output": include_output,
             "repetitions": repetitions,
-            "planned_runs": len(configurations) * len(prompts) * repetitions,
+            "planned_runs": len(models) * len(prompts) * repetitions,
             "progress": {
                 "phase": "starting",
                 "percent": 0.0,
                 "steps_done": 0,
-                "steps_total": len(configurations) * len(prompts) * repetitions,
+                "steps_total": len(models) * len(prompts) * repetitions,
                 "configuration": None,
                 "configuration_index": 0,
-                "configuration_count": len(configurations),
+                "configuration_count": len(models),
                 "prompt_index": 0,
                 "prompt_count": len(prompts),
                 "repetition": 0,
@@ -247,11 +266,10 @@ def start(
 
         job = _job
 
-    # Daemon, so a comparison in flight never keeps the dev server alive.
     threading.Thread(
         target=_work,
         args=(job,),
-        name=f"benchmark-{job['id']}",
+        name=f"models-{job['id']}",
         daemon=True,
     ).start()
 
@@ -259,36 +277,8 @@ def start(
         return _snapshot(job)
 
 
-def status() -> dict | None:
-    """Return the current job snapshot.
-
-    Returns:
-        dict | None: Snapshot, or None when no comparison has been started.
-    """
-    with _lock:
-        return _snapshot(_job) if _job is not None else None
-
-
-def job_is_running() -> bool:
-    """Report whether a comparison is holding the GPU right now.
-
-    The model-comparison service asks the same question before starting its
-    own run: two comparisons at once would contend for the GPU and make every
-    timing in both meaningless, whichever kind they are.
-
-    Returns:
-        bool: True while a comparison is in flight.
-    """
-    with _lock:
-        return _job is not None and _job["status"] == ACTIVE_STATUS
-
-
 def cancel() -> bool:
-    """Request cancellation of the running comparison.
-
-    Core stops at the next safe point — between prompts or mid-generation —
-    discards partial results and unloads the model it loaded. The job then
-    settles into the ``cancelled`` status the poller reports.
+    """Request cancellation of the running model comparison.
 
     Returns:
         bool: Whether a running comparison was found to cancel.

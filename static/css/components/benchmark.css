@@ -1025,6 +1025,56 @@
   color: var(--text-faint);
 }
 
+/* ---------- Model comparison drawer ---------- */
+
+/* Tick-list of installed models. :has() colours the whole chip once its
+   checkbox is ticked, which reads faster than a bare checkbox row. */
+.bench-models-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.bench-models-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  padding: 5px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-dim);
+  user-select: none;
+}
+
+.bench-models-item:hover {
+  border-color: var(--border-strong);
+}
+
+.bench-models-item:has(input:checked) {
+  border-color: var(--accent-blue);
+  background: var(--accent-blue-dim);
+  color: var(--accent-blue);
+}
+
+.bench-models-item input {
+  accent-color: var(--accent-blue);
+}
+
+.bench-models-status {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.bench-models-status.is-good {
+  color: var(--accent-green);
+}
+
+.bench-models-status.is-bad {
+  color: var(--accent-amber);
+}
+
 
 
 

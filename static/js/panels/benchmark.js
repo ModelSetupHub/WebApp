@@ -770,7 +770,7 @@ function applyJob(job) {
   renderResults(resultsEl, job);
   metaEl.textContent = t("bench.finishedAt", { time: job.finished_at || "" });
 
-  const discard = document.getElementById("btn-bench-discard");
+  const discard = resultsEl.querySelector("[data-results-discard]");
 
   if (discard) {
     discard.addEventListener("click", async () => {
