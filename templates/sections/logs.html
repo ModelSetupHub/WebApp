@@ -1,0 +1,67 @@
+{# Logs tab: the toolkit's execution log, read back through Core's own log
+   reader. Filters on top, the entries as a table, and the file-level actions
+   — open in the OS viewer, download, reset — in a quiet toolbar. #}
+<section id="logs" class="panel-section" aria-labelledby="logs-title">
+  <header class="section-head">
+    <div class="section-heading">
+      <h1 id="logs-title" data-i18n="logs.title">Logs</h1>
+      <p class="section-note" data-i18n="logs.note">
+        The toolkit's execution log — every operation it ran, with level,
+        component and details, newest last.
+      </p>
+    </div>
+
+    <div class="section-actions">
+      <span class="scan-meta" id="logs-meta" aria-live="polite"></span>
+      <button type="button" class="btn" id="btn-logs-open" data-i18n="logs.openFile">
+        Open file
+      </button>
+      <button type="button" class="btn" id="btn-logs-download" data-i18n="logs.download">
+        Download
+      </button>
+      <button type="button" class="btn btn-danger" id="btn-logs-reset" data-i18n="logs.reset">
+        Reset log
+      </button>
+    </div>
+  </header>
+
+  <div class="alert is-hidden" id="logs-error" role="alert"></div>
+
+  {# ---------- Filters ---------- #}
+  <div class="logs-filters">
+    <label class="field logs-filter">
+      <span class="field-label" data-i18n="logs.filterLevel">Level</span>
+      <select class="input is-ltr" id="logs-filter-level" dir="ltr">
+        <option value="" data-i18n="logs.filterAll">All</option>
+        <option value="INFO">INFO</option>
+        <option value="WARNING">WARNING</option>
+        <option value="ERROR">ERROR</option>
+      </select>
+    </label>
+
+    <label class="field logs-filter">
+      <span class="field-label" data-i18n="logs.filterComponent">Component</span>
+      <select class="input is-ltr" id="logs-filter-component" dir="ltr"></select>
+    </label>
+
+    <label class="field logs-filter">
+      <span class="field-label" data-i18n="logs.filterAction">Action</span>
+      <select class="input is-ltr" id="logs-filter-action" dir="ltr"></select>
+    </label>
+
+    <label class="field logs-filter logs-filter-limit">
+      <span class="field-label" data-i18n="logs.filterLimit">Limit</span>
+      <input class="input is-ltr" id="logs-filter-limit" type="number" dir="ltr"
+             min="1" max="5000" step="1" value="400" inputmode="numeric">
+    </label>
+
+    <button type="button" class="btn logs-refresh" id="btn-logs-refresh" data-i18n="logs.refresh">
+      Refresh
+    </button>
+  </div>
+
+  {# ---------- Entries ---------- #}
+  <div class="logs-table-wrap" id="logs-table-wrap">
+    <div class="empty-state" data-i18n="logs.noEntries">No log entries match the current filters.</div>
+  </div>
+</section>
