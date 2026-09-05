@@ -516,6 +516,7 @@ function toggleImport(open) {
   importEl.classList.toggle("is-hidden", !open);
 
   if (open) {
+    toggleCardBody(document.getElementById("bench-card-configs"), true);
     editorEl.classList.add("is-hidden");
   } else {
     clearPreview();
@@ -524,6 +525,7 @@ function toggleImport(open) {
 
 /** Put the editor into "add a new configuration" mode. */
 function openForAdd() {
+  toggleCardBody(document.getElementById("bench-card-configs"), true);
   editingId = null;
   editingExtras = {};
   editorTitleEl.textContent = t("bench.editorAdd");
@@ -544,11 +546,67 @@ function openForEdit(id) {
     return;
   }
 
+  toggleCardBody(document.getElementById("bench-card-configs"), true);
   editingId = config.id;
   editingExtras = fillEditor(config);
   editorTitleEl.textContent = t("bench.editorEdit", { name: config.name });
   editorSaveBtn.textContent = t("btn.save");
   toggleEditor(true);
+}
+
+/**
+ * Collapse or open one of the input cards. The head (number, title, live
+ * count) stays visible either way — the body is what folds away, so the page
+ * starts as three quiet summary bars.
+ *
+ * @param {HTMLElement|null} card The card to fold.
+ * @param {boolean} [open] Target state; omitted toggles.
+ */
+function toggleCardBody(card, open) {
+  if (!card) {
+    return;
+  }
+
+  // A collapsed card opens, an open card collapses, unless the caller names a
+  // target state explicitly.
+  const target =
+    open ?? card.classList.contains("is-collapsed");
+
+  card.classList.toggle("is-collapsed", !target);
+
+  const toggle = card.querySelector(".bench-card-toggle");
+
+  if (toggle) {
+    toggle.setAttribute("aria-expanded", target ? "true" : "false");
+  }
+}
+
+/** Start every input card collapsed — the page opens as three summary bars. */
+function initCollapsibleCards() {
+  document
+    .querySelectorAll(".bench-card")
+    .forEach((card) => toggleCardBody(card, false));
+
+  document.querySelectorAll(".bench-card-head").forEach((head) => {
+    // The configs head carries its own buttons (Add/Upload/Clear); those do
+    // their own work and must not fold the card.
+    head.addEventListener("click", (event) => {
+      if (event.target.closest(".bench-card-actions, button, input, select, label")) {
+        return;
+      }
+
+      toggleCardBody(head.closest(".bench-card"));
+    });
+
+    head.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") {
+        return;
+      }
+
+      event.preventDefault();
+      toggleCardBody(head.closest(".bench-card"));
+    });
+  });
 }
 
 function bindEditor() {
@@ -1223,6 +1281,7 @@ export async function initBenchmarkPanel() {
   bindConfigList();
   bindImport();
   bindRun();
+  initCollapsibleCards();
 
   promptsEl.addEventListener("input", () => {
     const count = readPrompts().length;

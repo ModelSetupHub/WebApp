@@ -392,7 +392,7 @@ export const STRINGS = {
   },
   "bench.exportSetup": { en: "Export setup", fa: "دریافت فایل تنظیمات" },
 
-  "bench.step1": { en: "1 · Prompts", fa: "1 · پرامپت‌ها" },
+  "bench.step1": { en: "Prompts", fa: "پرامپت‌ها" },
   "bench.modelHint": {
     en:
       "Every configuration is tested against this one model, so differences in " +
@@ -421,7 +421,7 @@ export const STRINGS = {
       "اندازه‌گیری‌ها نیاید.",
   },
 
-  "bench.step2": { en: "2 · Models", fa: "2 · مدل‌ها" },
+  "bench.step2": { en: "Models", fa: "مدل‌ها" },
   "bench.noModelsYet": { en: "No model selected", fa: "مدلی انتخاب نشده" },
   "bench.modelReady": { en: "1 model selected", fa: "۱ مدل انتخاب شده" },
   "bench.modelsReadyCount": { en: "{n} models selected", fa: "{n} مدل انتخاب شده" },
@@ -462,7 +462,7 @@ export const STRINGS = {
   "bench.oneModel": { en: "1 model", fa: "۱ مدل" },
   "bench.nModels": { en: "{n} models", fa: "{n} مدل" },
 
-  "bench.step3": { en: "3 · Configurations", fa: "3 · تنظیم‌ها" },
+  "bench.step3": { en: "Configurations", fa: "تنظیم‌ها" },
   "bench.noConfigsYet": { en: "No configurations yet", fa: "هنوز تنظیمی اضافه نشده" },
   "bench.configReady": { en: "1 configuration ready", fa: "1 تنظیم آماده است" },
   "bench.configsReady": { en: "{n} configurations ready", fa: "{n} تنظیم آماده است" },

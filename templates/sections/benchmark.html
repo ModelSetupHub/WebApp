@@ -30,64 +30,70 @@
     <div class="bench-inputs">
 
       {# 1 · Models #}
-      <div class="bench-card" id="bench-card-models">
-        <div class="bench-card-head">
+      <div class="bench-card is-collapsed" id="bench-card-models">
+        <div class="bench-card-head" role="button" tabindex="0" aria-expanded="false">
           <span class="bench-card-step" aria-hidden="true">1</span>
-          <div class="bench-card-titles">
+          <span class="bench-card-titles">
             <span class="bench-card-title" data-i18n="bench.step2">Models</span>
             <span class="bench-card-sub" id="bench-model-count" data-i18n="bench.noModelsYet">
               No model selected
             </span>
-          </div>
+          </span>
           <span class="bench-card-badge" id="bench-models-badge" aria-live="polite"></span>
+          <span class="bench-card-toggle" aria-hidden="true">▶</span>
         </div>
 
-        <div class="bench-models-list" id="bench-models-list"></div>
+        <div class="bench-card-body">
+          <div class="bench-models-list" id="bench-models-list"></div>
 
-        <p class="bench-card-hint" data-i18n="bench.modelsHint">
-          One model measures that model. Two or more race against each other,
-          one at a time so they never share the GPU.
-        </p>
-      </div>
-
-      {# 2 · Prompts #}
-      <div class="bench-card">
-        <div class="bench-card-head">
-          <span class="bench-card-step" aria-hidden="true">2</span>
-          <div class="bench-card-titles">
-            <span class="bench-card-title" data-i18n="bench.step1">Prompts</span>
-            <span class="bench-card-sub" id="bench-prompt-count" data-i18n="bench.noPromptsYet">
-              No prompts written
-            </span>
-          </div>
-        </div>
-
-        <textarea class="input" id="bench-prompts" rows="6"
-                  data-i18n-placeholder="bench.promptsPlaceholder"></textarea>
-
-        <div class="bench-card-inline">
-          <label class="field bench-reps-field">
-            <span class="field-label" data-i18n="bench.repetitions">Repetitions</span>
-            <input class="input is-ltr" id="bench-repetitions" type="number" dir="ltr"
-                   min="1" max="10" step="1" value="1" inputmode="numeric">
-          </label>
-          <p class="bench-card-hint" data-i18n="bench.repetitionsHint">
-            Each prompt runs this many times; results average the runs and
-            report their spread, so a real difference separates from noise.
+          <p class="bench-card-hint" data-i18n="bench.modelsHint">
+            One model measures that model. Two or more race against each other,
+            one at a time so they never share the GPU.
           </p>
         </div>
       </div>
 
+      {# 2 · Prompts #}
+      <div class="bench-card is-collapsed" id="bench-card-prompts">
+        <div class="bench-card-head" role="button" tabindex="0" aria-expanded="false">
+          <span class="bench-card-step" aria-hidden="true">2</span>
+          <span class="bench-card-titles">
+            <span class="bench-card-title" data-i18n="bench.step1">Prompts</span>
+            <span class="bench-card-sub" id="bench-prompt-count" data-i18n="bench.noPromptsYet">
+              No prompts written
+            </span>
+          </span>
+          <span class="bench-card-toggle" aria-hidden="true">▶</span>
+        </div>
+
+        <div class="bench-card-body">
+          <textarea class="input" id="bench-prompts" rows="6"
+                    data-i18n-placeholder="bench.promptsPlaceholder"></textarea>
+
+          <div class="bench-card-inline">
+            <label class="field bench-reps-field">
+              <span class="field-label" data-i18n="bench.repetitions">Repetitions</span>
+              <input class="input is-ltr" id="bench-repetitions" type="number" dir="ltr"
+                     min="1" max="10" step="1" value="1" inputmode="numeric">
+            </label>
+            <p class="bench-card-hint" data-i18n="bench.repetitionsHint">
+              Each prompt runs this many times; results average the runs and
+              report their spread, so a real difference separates from noise.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {# 3 · Configurations #}
-      <div class="bench-card">
-        <div class="bench-card-head">
+      <div class="bench-card is-collapsed" id="bench-card-configs">
+        <div class="bench-card-head" role="button" tabindex="0" aria-expanded="false">
           <span class="bench-card-step" aria-hidden="true">3</span>
-          <div class="bench-card-titles">
+          <span class="bench-card-titles">
             <span class="bench-card-title" data-i18n="bench.step3">Configurations</span>
             <span class="bench-card-sub" id="bench-config-count" data-i18n="bench.noConfigsYet">
               No configurations yet
             </span>
-          </div>
+          </span>
           <div class="bench-card-actions">
             <button type="button" class="btn btn-sm btn-primary" id="btn-config-add" data-i18n="bench.addConfig">
               Add
@@ -99,8 +105,10 @@
               Clear
             </button>
           </div>
+          <span class="bench-card-toggle" aria-hidden="true">▶</span>
         </div>
 
+        <div class="bench-card-body">
         {# Import drawer #}
         <div class="bench-drawer is-hidden" id="bench-import" role="group"
              aria-labelledby="bench-import-title">
@@ -191,6 +199,7 @@
           Optional. With none, every model runs under its own defaults — that is
           the plain speed test.
         </p>
+        </div>
       </div>
     </div>
 

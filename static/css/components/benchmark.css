@@ -18,7 +18,9 @@
 }
 
 /* One numbered card per input. The head carries the step number, the title
-   and the live count of what it holds, so each card reports its own state. */
+   and the live count of what it holds, so each card reports its own state.
+   Cards collapse to their head: the toggle button opens the body, and the
+   caret flips with it. */
 .bench-card {
   background: var(--panel);
   border: 1px solid var(--border-soft);
@@ -29,11 +31,48 @@
   gap: 11px;
 }
 
+.bench-card.is-collapsed {
+  padding-bottom: 12px;
+}
+
+.bench-card.is-collapsed .bench-card-body {
+  display: none;
+}
+
+.bench-card.is-collapsed .bench-card-toggle {
+  transform: rotate(0deg);
+}
+
 .bench-card-head {
   display: flex;
   align-items: center;
   gap: 11px;
   flex-wrap: wrap;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.bench-card-head[role="button"]:hover .bench-card-title {
+  color: var(--accent-blue);
+}
+
+.bench-card-head[role="button"]:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+
+.bench-card-toggle {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--text-faint);
+  transform: rotate(90deg);
+  transition: transform 0.15s ease;
 }
 
 .bench-card-step {
@@ -73,6 +112,12 @@
   display: flex;
   gap: 7px;
   margin-left: auto;
+}
+
+.bench-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
 }
 
 .bench-card-badge {
