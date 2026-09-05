@@ -37,7 +37,42 @@ const METRICS = [
     better: "low",
     digits: 2,
   },
+  {
+    key: "average_ttft_seconds",
+    title: "bench.metricTtft",
+    note: "bench.metricTtftNote",
+    short: "bench.metricTtftShort",
+    better: "low",
+    digits: 3,
+  },
 ];
+
+/**
+ * Derive the comparison-level TTFT average from the per-prompt rows.
+ *
+ * Core times the first streamed token per prompt; the four-metric layout wants
+ * it averaged per configuration like the other three metrics, which Core's
+ * summary does not carry yet, so the mean is taken here from exactly the rows
+ * that reported one.
+ *
+ * @param {Array<object>} tests Tests from compare_tests, updated in place.
+ */
+function deriveTtftAverages(tests) {
+  tests.forEach((test) => {
+    const values = (test.results || [])
+      .filter(
+        (row) =>
+          row.success &&
+          row.ttft_seconds !== null &&
+          row.ttft_seconds !== undefined
+      )
+      .map((row) => row.ttft_seconds);
+
+    test.summary.average_ttft_seconds = values.length
+      ? values.reduce((sum, value) => sum + value, 0) / values.length
+      : null;
+  });
+}
 
 /**
  * Format a number for display, or an em dash when it is missing.
@@ -451,6 +486,8 @@ export function renderResults(el, job) {
     el.innerHTML = `<div class="empty-state">${escapeHtml(t("bench.noResults"))}</div>`;
     return;
   }
+
+  deriveTtftAverages(tests);
 
   const significance = job.result.significance || null;
   const reps = job.repetitions || 1;

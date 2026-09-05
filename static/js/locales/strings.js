@@ -703,6 +703,20 @@ export const STRINGS = {
     fa: "ثانیه برای هر پرامپت · کمتر بهتر است",
   },
   "bench.metricDurationShort": { en: "seconds", fa: "ثانیه" },
+  "bench.metricTtft": { en: "First token", fa: "اولین توکن" },
+  "bench.metricTtftNote": {
+    en:
+      "seconds until the first token arrives · lower feels faster · shown " +
+      "when timings include it",
+    fa:
+      "ثانیه تا رسیدن اولین توکن · کمترش سریع‌تر حس می‌شود · در صورت وجود در " +
+      "نتایج نمایش داده می‌شود",
+  },
+  "bench.metricTtftShort": { en: "ttft s", fa: "ثانیه تا اولین توکن" },
+  "bench.metricTtftEmpty": {
+    en: "no first-token timings in this run",
+    fa: "زمان اولین توکن در این اجرا ثبت نشده",
+  },
 
   "bench.colConfiguration": { en: "configuration", fa: "تنظیم" },
   "bench.colOutputTokens": { en: "output tokens", fa: "توکن تولیدشده" },
