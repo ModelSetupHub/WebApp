@@ -931,6 +931,17 @@ export const STRINGS = {
   "bench.exportCsv": { en: "CSV", fa: "CSV" },
   "bench.exportJson": { en: "JSON", fa: "JSON" },
 
+  // ---------- Benchmark: the output-speed chart ----------
+  "bench.chartTitle": { en: "Output speed", fa: "سرعت تولید" },
+  "bench.chartAria": {
+    en: "Bar chart comparing generation speed, with each bar's noise band",
+    fa: "نمودار مقایسه‌ی سرعت تولید با نوار نویز هر تنظیم",
+  },
+  "bench.chartCaption": {
+    en: "darker band = ± one standard deviation · longest bar with the narrowest band wins",
+    fa: "نوار تیره = ± یک انحراف معیار · برنده بلندترین با باریک‌ترین نوار",
+  },
+
   // ---------- Benchmark: several models in one run ----------
   "bench.resultsHeadModels": {
     en: "{n} model(s) compared",

@@ -1566,3 +1566,53 @@
   font-size: 11.5px;
   color: var(--text-faint);
 }
+
+/* ---------- Output-speed chart ---------- */
+
+/* An SVG bar chart: one bar per configuration, longest at the top, each with
+   a darker band as wide as its measured noise. Bars for the also-rans render
+   at reduced opacity so the winner reads first. */
+.bench-chart-wrap {
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+
+.bench-chart-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.bench-chart svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  margin-top: 10px;
+  font-family: var(--font-mono);
+}
+
+.bench-chart-label {
+  font-size: 12px;
+  fill: var(--text-dim);
+}
+
+.bench-chart-value {
+  font-size: 12px;
+  fill: var(--text-dim);
+}
+
+.bench-chart-value.is-winner {
+  fill: var(--text);
+  font-weight: 700;
+}
+
+.bench-chart-caption {
+  font-size: 11px;
+  color: var(--text-faint);
+  display: block;
+  margin-top: 8px;
+}

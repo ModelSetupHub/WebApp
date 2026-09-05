@@ -476,6 +476,104 @@ function detail(test, position) {
 }
 
 /**
+ * Build the SVG output-speed chart.
+ *
+ * One bar per configuration, longest at the top, each carrying a darker band
+ * as wide as its measured noise — two bars whose bands overlap are saying the
+ * same speed, which the numbers below can only imply. The winner's bar gets
+ * the full-strength series colour; the rest render at reduced opacity so the
+ * eye lands on the finding first.
+ *
+ * @param {Array<object>} tests Tests from compare_tests.
+ * @returns {string} SVG markup, or "" when nothing measurable was reported.
+ */
+function outputSpeedChart(tests) {
+  const measured = tests
+    .map((test, position) => ({
+      name: test.name,
+      rate: test.summary.average_output_tokens_per_second,
+      noise: test.summary.output_tokens_per_second_stddev,
+      position,
+    }))
+    .filter((entry) => entry.rate !== null && entry.rate !== undefined);
+
+  if (measured.length === 0) {
+    return "";
+  }
+
+  measured.sort((a, b) => b.rate - a.rate);
+
+  const best = measured[0].rate;
+  const scaleMax = Math.max(
+    best +
+      measured.reduce((max, entry) => {
+        const noise = entry.noise ?? 0;
+        return Math.max(max, entry.rate + noise);
+      }, 0),
+    best * 1.05
+  ) || 1;
+
+  const plotX = 150;
+  const plotWidth = 380;
+  const rowHeight = 42;
+  const barHeight = 20;
+  const width = 640;
+  const height = measured.length * rowHeight + 30;
+
+  const scale = (value) => (value / scaleMax) * plotWidth;
+
+  const rows = measured
+    .map((entry, index) => {
+      const y = index * rowHeight + 14;
+      const barWidth = Math.max(scale(entry.rate), 2);
+      const color = seriesColor(
+        indexOfName(entry.name) === -1 ? entry.position : indexOfName(entry.name)
+      );
+      const isWinner = index === 0;
+      const opacity = isWinner ? 1 : 0.55;
+
+      // The noise band centres on the mean and spans one stddev either way.
+      const noise = entry.noise ?? 0;
+      const bandStart = scale(Math.max(entry.rate - noise, 0));
+      const bandWidth = Math.max(scale(entry.rate + noise) - bandStart, 1);
+
+      const valueText = Number(entry.rate).toFixed(1);
+      const valueX = plotX + barWidth + 8;
+
+      return `
+        <text x="0" y="${y + barHeight / 2 + 4}" class="bench-chart-label"
+              title="${escapeHtml(entry.name)}">${
+                escapeHtml(entry.name.length > 20 ? `${entry.name.slice(0, 19)}…` : entry.name)
+              }</text>
+        <rect x="${plotX}" y="${y}" width="${plotWidth}" height="${barHeight}"
+              rx="4" fill="none" stroke="var(--border-soft)"></rect>
+        <rect x="${plotX}" y="${y}" width="${barWidth.toFixed(1)}" height="${barHeight}"
+              rx="4" fill="${color}" opacity="${opacity}"></rect>
+        ${
+          noise > 0
+            ? `<rect x="${(plotX + bandStart).toFixed(1)}" y="${y}" width="${bandWidth.toFixed(1)}"
+                 height="${barHeight}" fill="#000" opacity="0.28"></rect>`
+            : ""
+        }
+        <text x="${Math.min(valueX, width - 8)}" y="${y + barHeight / 2 + 4}"
+              class="bench-chart-value${isWinner ? " is-winner" : ""}">${valueText}</text>`;
+    })
+    .join("");
+
+  return `
+    <figure class="bench-chart">
+      <figcaption class="bench-chart-title">${escapeHtml(
+        t("bench.chartTitle")
+      )}</figcaption>
+      <svg viewBox="0 0 ${width} ${height}" role="img"
+           aria-label="${escapeHtml(t("bench.chartAria"))}">
+        ${rows}
+      </svg>
+      <span class="bench-chart-caption">${escapeHtml(t("bench.chartCaption"))}</span>
+    </figure>`;
+}
+
+/**
  * Paint a finished comparison.
  *
  * @param {HTMLElement} el Container element.
@@ -641,6 +739,8 @@ export function renderResults(el, job, {
 
       ${verdict(tests, significance)}
       ${applyForm(job, winnerName)}
+
+      <div class="bench-chart-wrap">${outputSpeedChart(tests)}</div>
 
       <div class="bench-metrics">${metricBars(tests)}</div>
 
