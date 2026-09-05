@@ -392,7 +392,7 @@ export const STRINGS = {
   },
   "bench.exportSetup": { en: "Export setup", fa: "دریافت فایل تنظیمات" },
 
-  "bench.step1": { en: "1 · Target", fa: "1 · هدف" },
+  "bench.step1": { en: "Prompts", fa: "پرامپت‌ها" },
   "bench.modelHint": {
     en:
       "Every configuration is tested against this one model, so differences in " +
@@ -421,7 +421,48 @@ export const STRINGS = {
       "اندازه‌گیری‌ها نیاید.",
   },
 
-  "bench.step2": { en: "2 · Configurations", fa: "2 · تنظیم‌ها" },
+  "bench.step2": { en: "Models", fa: "مدل‌ها" },
+  "bench.noModelsYet": { en: "No model selected", fa: "مدلی انتخاب نشده" },
+  "bench.modelReady": { en: "1 model selected", fa: "۱ مدل انتخاب شده" },
+  "bench.modelsReadyCount": { en: "{n} models selected", fa: "{n} مدل انتخاب شده" },
+  "bench.noPromptsYet": { en: "No prompts written", fa: "پرامپتی نوشته نشده" },
+  "bench.promptReady": { en: "1 prompt ready", fa: "۱ پرامپت آماده" },
+  "bench.promptsReady": { en: "{n} prompts ready", fa: "{n} پرامپت آماده" },
+  "bench.promptsReadyCount": { en: "{n} prompts ready", fa: "{n} پرامپت آماده" },
+  "bench.launchTitle": { en: "Run", fa: "اجرا" },
+  "bench.modelsHint": {
+    en:
+      "One model measures that model. Two or more race against each other, " +
+      "one at a time so they never share the GPU.",
+    fa:
+      "یک مدل، همان مدل را می‌سنجد. دو مدل یا بیشتر با هم مسابقه می‌دهند و " +
+      "یکی‌یکی اجرا می‌شوند تا GPU را با هم شریک نشوند.",
+  },
+  "bench.configsHint": {
+    en:
+      "Optional. With none, every model runs under its own defaults — that is " +
+      "the plain speed test.",
+    fa:
+      "اختیاری. با هیچ تنظیمی، هر مدل با پیش‌فرض‌های خودش اجرا می‌شود — همان " +
+      "تست ساده‌ی سرعت.",
+  },
+  "bench.modelsToolbarNote": {
+    en:
+      "One model measures that model. Two or more compare them against each " +
+      "other, one at a time so they never share the GPU.",
+    fa:
+      "یک مدل، همان مدل را می‌سنجد. دو مدل یا بیشتر با هم مقایسه می‌شوند و " +
+      "یکی‌یکی اجرا می‌شوند تا GPU را با هم شریک نشوند.",
+  },
+  "bench.modelsTooMany": { en: "Too many models", fa: "تعداد مدل زیاد است" },
+  "bench.modelsTooManyBody": {
+    en: "At most {n} models can be compared in one run.",
+    fa: "در هر اجرا حداکثر {n} مدل قابل مقایسه است.",
+  },
+  "bench.oneModel": { en: "1 model", fa: "۱ مدل" },
+  "bench.nModels": { en: "{n} models", fa: "{n} مدل" },
+
+  "bench.step3": { en: "Configurations", fa: "تنظیم‌ها" },
   "bench.noConfigsYet": { en: "No configurations yet", fa: "هنوز تنظیمی اضافه نشده" },
   "bench.configReady": { en: "1 configuration ready", fa: "1 تنظیم آماده است" },
   "bench.configsReady": { en: "{n} configurations ready", fa: "{n} تنظیم آماده است" },
@@ -517,14 +558,75 @@ export const STRINGS = {
   "bench.configSaved": { en: "Configuration saved", fa: "تنظیم ذخیره شد" },
   "bench.configDuplicated": { en: "Configuration duplicated", fa: "تنظیم تکثیر شد" },
 
-  "bench.step3": { en: "3 · Run", fa: "3 · اجرا" },
+  "bench.step4": { en: "4 · Run", fa: "4 · اجرا" },
   "bench.keepOutput": { en: "Keep generated text", fa: "نگه‌داشتن متن تولیدشده" },
-  "bench.runComparison": { en: "Run comparison", fa: "اجرای مقایسه" },
+  "bench.runComparison": { en: "Run benchmark", fa: "اجرای بنچمارک" },
   "bench.nothingToRun": { en: "Nothing to run yet", fa: "هنوز چیزی برای اجرا نیست" },
   "bench.nothingToRunNote": {
-    en: "Choose a model, write at least one prompt, and add a configuration.",
-    fa: "یک مدل انتخاب کنید، دست‌کم یک پرامپت بنویسید، و یک تنظیم اضافه کنید.",
+    en: "Write at least one prompt and pick at least one model.",
+    fa: "دست‌کم یک پرامپت بنویسید و دست‌کم یک مدل انتخاب کنید.",
   },
+
+  // ---------- Benchmark: the plan panel ----------
+  // The four kinds a run can be, named from the counts rather than chosen.
+  "bench.planNoneLabel": { en: "No test described yet", fa: "هنوز تستی مشخص نشده" },
+  "bench.planNoneNote": {
+    en: "Pick a model to see what kind of test the inputs describe.",
+    fa: "یک مدل انتخاب کنید تا نوع تست مشخص شود.",
+  },
+  "bench.plan.single": { en: "Model speed test", fa: "سنجش سرعت مدل" },
+  "bench.planNote.single": {
+    en:
+      "One model over {prompts} prompt(s) — {runs} generation(s) in total. Its " +
+      "speed, latency and memory as measured on this machine.",
+    fa:
+      "یک مدل روی {prompts} پرامپت — مجموعاً {runs} تولید. سرعت، تأخیر و " +
+      "حافظه‌ی آن، اندازه‌گیری‌شده روی همین سیستم.",
+  },
+  "bench.plan.configs": { en: "Configuration test", fa: "سنجش تنظیم‌ها" },
+  "bench.planNote.configs": {
+    en:
+      "{configs} configurations on one model — {runs} generation(s) in total. " +
+      "Which settings are actually faster for this model.",
+    fa:
+      "{configs} تنظیم روی یک مدل — مجموعاً {runs} تولید. اینکه کدام تنظیم " +
+      "واقعاً برای این مدل سریع‌تر است.",
+  },
+  "bench.plan.models": { en: "Model comparison", fa: "مقایسه‌ی مدل‌ها" },
+  "bench.planNote.models": {
+    en:
+      "{models} models under the same settings — {runs} generation(s) in " +
+      "total, each model measured alone so they never share the GPU.",
+    fa:
+      "{models} مدل با تنظیم یکسان — مجموعاً {runs} تولید؛ هر مدل جدا " +
+      "اندازه‌گیری می‌شود تا GPU را با هم شریک نشوند.",
+  },
+  "bench.plan.tournament": { en: "Tournament", fa: "مسابقه" },
+  "bench.planNote.tournament": {
+    en:
+      "{models} models, each under the configuration paired with it — {runs} " +
+      "generation(s) in total. The full head-to-head.",
+    fa:
+      "{models} مدل، هر کدام با تنظیمِ خودش — مجموعاً {runs} تولید. " +
+      "رقابت کامل رو‌در‌رو.",
+  },
+  "bench.pairingTitle": { en: "Configuration per model", fa: "تنظیم هر مدل" },
+  "bench.pairingNote": {
+    en:
+      "Several models and several configurations: give each model the one it " +
+      "races under.",
+    fa:
+      "چند مدل و چند تنظیم: به هر مدل تنظیمی بدهید که با آن مسابقه می‌دهد.",
+  },
+  "bench.defaultConfigName": { en: "defaults", fa: "پیش‌فرض" },
+  "bench.factorModel": { en: "1 model", fa: "۱ مدل" },
+  "bench.factorModels": { en: "{n} models", fa: "{n} مدل" },
+  "bench.factorConfig": { en: "1 config", fa: "۱ تنظیم" },
+  "bench.factorConfigs": { en: "{n} configs", fa: "{n} تنظیم" },
+  "bench.factorPrompt": { en: "1 prompt", fa: "۱ پرامپت" },
+  "bench.factorPrompts": { en: "{n} prompts", fa: "{n} پرامپت" },
+  "bench.factorRep": { en: "×{n} reps", fa: "×{n} تکرار" },
+  "bench.factorReps": { en: "×{n} reps", fa: "×{n} تکرار" },
   "bench.inProgress": { en: "Comparison in progress", fa: "مقایسه در حال اجراست" },
   "bench.inProgressNote": {
     en: "The setup is locked until this run finishes.",
@@ -548,26 +650,36 @@ export const STRINGS = {
   "bench.ready": { en: "Ready to run", fa: "آماده اجراست" },
   "bench.readyNote": {
     en:
-      "{n} generation(s) against {model}. Each one is timed separately, with " +
-      "model load time excluded.",
+      "{n} generation(s). Each one is timed separately, with model load time " +
+      "excluded.",
     fa:
-      "{n} بار تولید روی {model}. هر کدام جدا زمان‌سنجی می‌شود و زمان بارگذاری " +
-      "مدل در آن حساب نمی‌شود.",
+      "{n} بار تولید. هر کدام جدا زمان‌سنجی می‌شود و زمان بارگذاری مدل در آن " +
+      "حساب نمی‌شود.",
   },
   "bench.listSeparator": { en: ", ", fa: "، " },
 
   // ---------- Benchmark: cards, progress, results ----------
+  "bench.cardModels": { en: "Models", fa: "مدل‌ها" },
+  "bench.cardModelsSub": {
+    en: "measured one at a time",
+    fa: "یکی‌یکی اندازه‌گیری می‌شوند",
+  },
   "bench.cardConfigs": { en: "Configurations", fa: "تنظیم‌ها" },
   "bench.cardConfigsSub": {
-    en: "compared against one model",
-    fa: "مقایسه‌شده روی یک مدل",
+    en: "none means model defaults",
+    fa: "خالی یعنی پیش‌فرض مدل",
   },
   "bench.cardPrompts": { en: "Prompts", fa: "پرامپت‌ها" },
   "bench.cardPromptsSub": {
-    en: "run against every configuration",
-    fa: "اجرا روی هر تنظیم",
+    en: "answered by every run",
+    fa: "در هر اجرا پاسخ داده می‌شوند",
   },
   "bench.cardTotalRuns": { en: "Total runs", fa: "کل اجراها" },
+  "bench.statModels": { en: "models", fa: "مدل" },
+  "bench.statConfigs": { en: "configs", fa: "تنظیم" },
+  "bench.statPrompts": { en: "prompts", fa: "پرامپت" },
+  "bench.statRuns": { en: "generations", fa: "تولید" },
+  "bench.statServer": { en: "server", fa: "سرور" },
   "bench.cardTotalRunsSub": {
     en: "generations this comparison performs",
     fa: "تعداد تولیدهای این مقایسه",
@@ -583,13 +695,28 @@ export const STRINGS = {
   "bench.finishedAt": { en: "Finished {time}", fa: "پایان‌یافته در {time}" },
   "bench.failedAt": { en: "Failed at {time}", fa: "ناموفق در {time}" },
   "bench.progressText": {
-    en:
-      "Running {runs} generation(s) across {configs} configuration(s) on {model}.",
-    fa: "اجرای {runs} تولید با {configs} تنظیم روی {model}.",
+    en: "Running {runs} generation(s) on {model}.",
+    fa: "اجرای {runs} تولید روی {model}.",
   },
   "bench.progressMeta": {
     en: "started {time} · {seconds}s elapsed",
     fa: "شروع {time} · {seconds} ثانیه گذشته",
+  },
+  "bench.progressStarting": {
+    en: "Preparing the run — loading the model and starting the first prompt…",
+    fa: "آماده‌سازی اجرا — بارگذاری مدل و شروع اولین پرامپت…",
+  },
+  "bench.progressStep": {
+    en:
+      "Configuration {name} ({i} of {n}) · prompt {p} of {pn} · repetition " +
+      "{r} of {rn}",
+    fa:
+      "تنظیم {name} ({i} از {n}) · پرامپت {p} از {pn} · تکرار {r} از {rn}",
+  },
+  "bench.progressStepModel": {
+    en:
+      "Model {name} ({i} of {n}) · prompt {p} of {pn} · repetition {r} of {rn}",
+    fa: "مدل {name} ({i} از {n}) · پرامپت {p} از {pn} · تکرار {r} از {rn}",
   },
   "bench.runningPlaceholder": {
     en: "The comparison is running…",
@@ -657,8 +784,12 @@ export const STRINGS = {
     fa: "{model} · {n} تنظیم",
   },
   "bench.resultsSub": {
-    en: "{prompts} prompt(s) each · {seconds} s total · finished {time}",
-    fa: "هر کدام {prompts} پرامپت · مجموعاً {seconds} ثانیه · پایان در {time}",
+    en:
+      "{prompts} prompt(s) each · {reps} repetition(s) · {seconds} s total · " +
+      "finished {time}",
+    fa:
+      "هر کدام {prompts} پرامپت · {reps} تکرار · مجموعاً {seconds} ثانیه · " +
+      "پایان در {time}",
   },
   "bench.discardResults": { en: "Discard results", fa: "دور انداختن نتایج" },
 
@@ -699,6 +830,20 @@ export const STRINGS = {
     fa: "ثانیه برای هر پرامپت · کمتر بهتر است",
   },
   "bench.metricDurationShort": { en: "seconds", fa: "ثانیه" },
+  "bench.metricTtft": { en: "First token", fa: "اولین توکن" },
+  "bench.metricTtftNote": {
+    en:
+      "seconds until the first token arrives · lower feels faster · shown " +
+      "when timings include it",
+    fa:
+      "ثانیه تا رسیدن اولین توکن · کمترش سریع‌تر حس می‌شود · در صورت وجود در " +
+      "نتایج نمایش داده می‌شود",
+  },
+  "bench.metricTtftShort": { en: "ttft s", fa: "ثانیه تا اولین توکن" },
+  "bench.metricTtftEmpty": {
+    en: "no first-token timings in this run",
+    fa: "زمان اولین توکن در این اجرا ثبت نشده",
+  },
 
   "bench.colConfiguration": { en: "configuration", fa: "تنظیم" },
   "bench.colOutputTokens": { en: "output tokens", fa: "توکن تولیدشده" },
@@ -716,6 +861,106 @@ export const STRINGS = {
   "bench.statPromptRate": { en: "prompt tok/s", fa: "توکن/ثانیه پرامپت" },
   "bench.statOutputTokens": { en: "output tokens", fa: "توکن تولیدشده" },
   "bench.statPromptTokens": { en: "prompt tokens", fa: "توکن پرامپت" },
+  "bench.statTtft": { en: "ttft s", fa: "ثانیه تا اولین توکن" },
+  "bench.statVram": { en: "MB VRAM", fa: "مگابایت VRAM" },
+  "bench.statTemperature": { en: "°C GPU", fa: "درجه GPU" },
+  "bench.statClock": { en: "MHz clock", fa: "مگاهرتز کلاک" },
+
+  // ---------- Benchmark: repetitions and noise ----------
+  "bench.repetitions": { en: "Repetitions", fa: "تکرارها" },
+  "bench.repetitionsHint": {
+    en:
+      "Each prompt runs this many times; results average the runs and report " +
+      "how far they spread, so a real difference can be told apart from noise.",
+    fa:
+      "هر پرامپت این تعداد بار اجرا می‌شود؛ نتیجه میانگین اجراها را می‌دهد و " +
+      "میزان پراکندگی‌شان را گزارش می‌کند تا تفاوت واقعی از نویز شناخته شود.",
+  },
+  "bench.cardTotalRunsRepsSub": {
+    en: "{reps} repetition(s) per prompt included",
+    fa: "شامل {reps} تکرار برای هر پرامپت",
+  },
+  "bench.significanceReal": { en: "Real difference", fa: "تفاوت واقعی" },
+  "bench.significanceNoise": { en: "Within noise", fa: "در حد نویز" },
+  "bench.significanceUnknown": { en: "Unmeasured", fa: "اندازه‌گیری‌نشده" },
+
+  // ---------- Benchmark: history ----------
+  "bench.historyTitle": { en: "History", fa: "تاریخچه" },
+  "bench.historyRun": { en: "1 saved run", fa: "۱ اجرای ذخیره‌شده" },
+  "bench.historyRuns": { en: "{n} saved runs", fa: "{n} اجرای ذخیره‌شده" },
+  "bench.historyEmptyShort": { en: "empty", fa: "خالی" },
+  "bench.historyEmpty": {
+    en: "Finished comparisons are saved here automatically.",
+    fa: "مقایسه‌های تمام‌شده به‌صورت خودکار اینجا ذخیره می‌شوند.",
+  },
+  "bench.historyColSaved": { en: "saved", fa: "زمان ذخیره" },
+  "bench.historyColModel": { en: "model(s)", fa: "مدل‌ها" },
+  "bench.historyColConfigs": { en: "configs", fa: "تنظیم‌ها" },
+  "bench.historyColPrompts": { en: "prompts", fa: "پرامپت‌ها" },
+  "bench.historyColWinner": { en: "winner", fa: "برنده" },
+  "bench.historyColNoise": { en: "noise verdict", fa: "حکم نویز" },
+  "bench.historyDetails": { en: "Details", fa: "جزئیات" },
+  "bench.historyNoAverages": { en: "no measured rates", fa: "سرعت قابل‌اندازه‌گیری ثبت نشده" },
+  "bench.historyDelete": { en: "Delete", fa: "حذف" },
+  "bench.historyDeleteConfirm": {
+    en: "Delete this saved comparison from the history? This cannot be undone.",
+    fa: "این مقایسه‌ی ذخیره‌شده از تاریخچه حذف شود؟ این کار قابل بازگشت نیست.",
+  },
+  "bench.historyDeleteDone": { en: "Deleted", fa: "حذف شد" },
+  "bench.historyDeleteFailed": { en: "Could not delete", fa: "حذف انجام نشد" },
+  "bench.historyLoadFailed": {
+    en: "Could not load the history — {error}",
+    fa: "بارگذاری تاریخچه ناموفق بود — {error}",
+  },
+  "bench.savedToHistory": { en: "saved to history", fa: "در تاریخچه ذخیره شد" },
+
+  // ---------- Benchmark: keep the winner as a model ----------
+  "bench.applyLabel": {
+    en: "Keep this configuration as a model",
+    fa: "این تنظیم را به‌عنوان مدل نگه دار",
+  },
+  "bench.applyButton": { en: "Apply", fa: "اعمال" },
+  "bench.applyHint": {
+    en: "Creates a new model with these options; the original stays untouched.",
+    fa: "یک مدل جدید با این تنظیم‌ها می‌سازد؛ مدل اصلی دست‌نخورده می‌ماند.",
+  },
+  "bench.applied": { en: "Model created", fa: "مدل ساخته شد" },
+  "bench.applyFailed": { en: "Could not create the model", fa: "ساخت مدل ناموفق بود" },
+
+  // ---------- Benchmark: result downloads ----------
+  "bench.exportCsv": { en: "CSV", fa: "CSV" },
+  "bench.exportJson": { en: "JSON", fa: "JSON" },
+  "bench.exportCsvTitle": { en: "Download the summary table as CSV", fa: "دانلود جدول خلاصه به‌صورت CSV" },
+  "bench.exportJsonTitle": { en: "Download the full run as JSON", fa: "دانلود کامل اجرا به‌صورت JSON" },
+
+  // ---------- Benchmark: the output-speed chart ----------
+  "bench.chartTitle": { en: "Output speed", fa: "سرعت تولید" },
+  "bench.chartAria": {
+    en: "Bar chart comparing generation speed, with each bar's noise band",
+    fa: "نمودار مقایسه‌ی سرعت تولید با نوار نویز هر تنظیم",
+  },
+  "bench.chartCaption": {
+    en: "darker band = ± one standard deviation · longest bar with the narrowest band wins",
+    fa: "نوار تیره = ± یک انحراف معیار · برنده بلندترین با باریک‌ترین نوار",
+  },
+
+  // ---------- Benchmark: several models in one run ----------
+  "bench.resultsHeadModels": {
+    en: "{n} model(s) compared",
+    fa: "{n} مدل مقایسه شد",
+  },
+  "bench.modelsNoneInstalled": {
+    en: "No installed models found — pull one first.",
+    fa: "مدلی یافت نشد — اول یک مدل بگیرید.",
+  },
+  "bench.verdictWithinNoise": {
+    en:
+      "The gap to the next configuration is within measurement noise — either " +
+      "is fine; pick on other grounds.",
+    fa:
+      "فاصله با تنظیم بعدی در حد نویز اندازه‌گیری است — هر کدام کافی است؛ " +
+      "بر اساس معیارهای دیگر انتخاب کنید.",
+  },
 
   // ---------- Ollama option groups and hints ----------
   // The server publishes the option table (key, type, bounds); only the prose

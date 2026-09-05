@@ -5,6 +5,7 @@ from .benchmark_config import (
     normalize_configurations,
     normalize_options,
     normalize_prompts,
+    normalize_repetitions,
     parse_document,
 )
 from .benchmark_options import OPTION_SCHEMA
@@ -16,6 +17,7 @@ __all__ = [
     "normalize_configurations",
     "normalize_options",
     "normalize_prompts",
+    "normalize_repetitions",
     "parse_cli_table",
     "parse_document",
     "parse_model_info",

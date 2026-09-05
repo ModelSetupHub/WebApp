@@ -56,6 +56,8 @@ export async function loadModels({ quiet = false } = {}) {
     const running = runningRes.data;
 
     setInstalledModels((list.rows || []).map((row) => row.name).filter(Boolean));
+    // The benchmark tab's model-comparison drawer ticks from this list too.
+    window.dispatchEvent(new Event("models-loaded"));
 
     renderModelsCards(getInstalledModels().length, (running.rows || []).length);
     renderModelsTable(list);

@@ -1,16 +1,252 @@
 /* ---------- Benchmark ---------- */
 
-/* The target step pairs the model picker with the prompt box, so the two
-   inputs that define a run are read together rather than stacked apart. */
-.bench-target {
+/* The workbench: the three inputs form one column, the launch bay holds the
+   plan, the numbers and the run button and sticks while the inputs scroll. */
+.bench-workbench {
   display: grid;
-  grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
-  gap: 14px 22px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 320px);
+  gap: 16px;
   align-items: start;
+  margin-bottom: 26px;
+}
+
+.bench-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+/* One numbered card per input. The head carries the step number, the title
+   and the live count of what it holds, so each card reports its own state.
+   Cards collapse to their head: the toggle button opens the body, and the
+   caret flips with it. */
+.bench-card {
   background: var(--panel);
   border: 1px solid var(--border-soft);
   border-radius: var(--radius);
-  padding: 16px 18px;
+  padding: 15px 17px;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.bench-card.is-collapsed {
+  padding-bottom: 12px;
+}
+
+.bench-card.is-collapsed .bench-card-body {
+  display: none;
+}
+
+.bench-card.is-collapsed .bench-card-toggle {
+  transform: rotate(0deg);
+}
+
+.bench-card-head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  flex-wrap: wrap;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.bench-card-head[role="button"]:hover .bench-card-title {
+  color: var(--accent-blue);
+}
+
+.bench-card-head[role="button"]:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+
+.bench-card-toggle {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--text-faint);
+  transform: rotate(90deg);
+  transition: transform 0.15s ease;
+}
+
+.bench-card-step {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--panel-raised);
+  border: 1px solid var(--border-strong);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.bench-card-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+.bench-card-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.bench-card-sub {
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+.bench-card-actions {
+  display: flex;
+  gap: 7px;
+  margin-left: auto;
+}
+
+.bench-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.bench-card-badge {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-faint);
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  padding: 2px 9px;
+  min-width: 26px;
+  text-align: center;
+}
+
+.bench-card-badge.is-active {
+  color: var(--accent-amber);
+  border-color: var(--accent-amber);
+}
+
+.bench-card-hint {
+  font-size: 12px;
+  color: var(--text-faint);
+  margin: 0;
+}
+
+.bench-card textarea {
+  width: 100%;
+  resize: vertical;
+}
+
+.bench-card-inline {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.bench-card-inline .bench-reps-field {
+  flex: 0 0 150px;
+}
+
+.bench-card-inline .bench-card-hint {
+  flex: 1;
+  padding-top: 4px;
+}
+
+/* The launch bay: the plan, the numbers and the run button, pinned while the
+   inputs scroll. Everything needed to press the button is always on screen. */
+.bench-launch {
+  min-width: 0;
+}
+
+.bench-launch-sticky {
+  position: sticky;
+  top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--panel-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+.bench-launch-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.bench-launch-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text);
+}
+
+.bench-launch-switch {
+  align-self: flex-start;
+}
+
+.btn-block {
+  width: 100%;
+}
+
+.bench-run-note-pair {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+}
+
+.bench-run-note-pair .control-title {
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
+.bench-run-note-pair .control-note {
+  color: var(--text-faint);
+}
+
+/* Inside the narrow bay the numbers sit two per row instead of one wide strip. */
+.bench-launch .bench-stats {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 0;
+}
+
+.bench-launch .bench-stat-card {
+  padding: 8px 11px;
+}
+
+.bench-launch .bench-stat-card-value {
+  font-size: 14px;
+}
+
+/* The plan panel keeps its per-kind colour edge but loses its own card frame —
+   it lives inside the launch bay's frame now. The badge stacks above the note
+   so the text never squeezes beside it on a narrow bay. */
+.bench-launch .bench-plan {
+  background: transparent;
+  border: none;
+  border-left: 3px solid var(--border-strong);
+  border-radius: 0;
+  padding: 2px 0 2px 12px;
+  margin-bottom: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
 }
 
 /* ---------- Configuration toolbar ---------- */
@@ -473,15 +709,21 @@
 
 .bench-progress {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 9px;
   background: var(--panel);
   border: 1px solid var(--accent-blue-dim);
   border-left: 3px solid var(--accent-blue);
   border-radius: var(--radius-sm);
   padding: 12px 15px;
-  margin-top: 12px;
+  margin: 12px 0 16px;
+}
+
+.bench-progress-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .bench-progress-text {
@@ -494,6 +736,46 @@
   font-size: 11.5px;
   color: var(--text-faint);
   margin-left: auto;
+}
+
+/* The percentage bar itself. Core reports each finished step, so the fill
+   moves in real, countable increments rather than implying a smoothness the
+   poller cannot know. */
+.bench-progress-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bench-progress-track {
+  flex: 1;
+  height: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.bench-progress-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent-blue);
+  border-radius: 999px;
+  transition: width 0.6s ease;
+}
+
+.bench-progress-percent {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-dim);
+  min-width: 46px;
+  text-align: right;
+}
+
+.bench-progress-detail {
+  font-size: 12px;
+  color: var(--text-dim);
+  padding-left: 28px;
 }
 
 /* ---------- Results ---------- */
@@ -510,6 +792,34 @@
   justify-content: space-between;
   gap: 14px;
   flex-wrap: wrap;
+}
+
+/* The tools group: the saved-to-history pill and the download/discard
+   buttons, one tidy row that keeps its distance from the title instead of
+   squeezing beside it. */
+.bench-results-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--accent-green);
+  background: var(--accent-green-dim);
+  border: 1px solid var(--accent-green);
+  border-radius: 999px;
+  padding: 4px 11px;
+  white-space: nowrap;
+}
+
+.chip::before {
+  content: "¹3";
+  font-weight: 700;
 }
 
 .bench-results-title {
@@ -564,14 +874,58 @@
   margin-top: 3px;
 }
 
+/* The noise assessment under the verdict: whether the winner's gap survives
+   the spread the repetitions measured. Tone follows the assessment — real,
+   tied, or measured once. */
+.bench-significance {
+  flex-basis: 100%;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--border-soft);
+  padding-top: 10px;
+}
+
+.bench-significance-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.bench-significance.is-good .bench-significance-label {
+  color: var(--accent-green);
+  background: var(--accent-green-dim);
+}
+
+.bench-significance.is-tied .bench-significance-label {
+  color: var(--accent-amber);
+  background: var(--accent-amber-dim);
+}
+
+.bench-significance.is-unmeasured .bench-significance-label {
+  color: var(--text-dim);
+  background: var(--panel-raised);
+}
+
+.bench-significance-message {
+  font-size: 12.5px;
+  color: var(--text-dim);
+}
+
 /* ---------- Comparison bars ---------- */
 
 /* One metric per block, each configuration a row inside it, bars scaled against
    the best value in that block. Reading down a block ranks the configurations;
-   reading across the blocks shows the trade-off. */
+   reading across the blocks shows the trade-off. Four blocks settle into a
+   two-by-two grid on a wide screen and stack on a narrow one. */
 .bench-metrics {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  grid-template-columns: repeat(2, minmax(min(100%, 320px), 1fr));
   gap: 14px;
 }
 
@@ -797,6 +1151,21 @@
   font-weight: 600;
 }
 
+/* The machine readings row — TTFT, VRAM, GPU temperature and clock — set
+   slightly apart from the timing stats it follows, since those describe the
+   generation and these describe the machine that produced it. */
+.bench-prompt-machine {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 5px;
+  padding-left: 26px;
+}
+
+.bench-prompt-machine .bench-stat b {
+  color: var(--text-dim);
+}
+
 .bench-output {
   font-family: var(--font-mono);
   font-size: 11.5px;
@@ -822,7 +1191,361 @@
 }
 
 @media (max-width: 900px) {
-  .bench-target { grid-template-columns: minmax(0, 1fr); }
+  /* Narrow screens stack the bay above the inputs and let it scroll with the
+     page — sticky only pays for itself when the columns sit side by side. */
+  .bench-workbench { grid-template-columns: minmax(0, 1fr); }
+  .bench-launch-sticky { position: static; }
+}
+
+/* ---------- History ---------- */
+
+/* Finished comparisons, kept behind a collapsible header so the tab's main
+   flow — target, configurations, run, results — never competes with the
+   archive. The list itself is a plain table; each row opens an inline detail
+   with the per-configuration averages and the delete button. */
+.bench-history-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  padding: 9px 13px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.bench-history-head:hover {
+  border-color: var(--border-strong);
+}
+
+.bench-history-title {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.bench-history-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.bench-history-body {
+  margin-top: 9px;
+}
+
+.bench-history-table {
+  font-size: 12px;
+}
+
+.bench-history-table td,
+.bench-history-table th {
+  padding: 7px 10px;
+}
+
+.bench-history-actions {
+  text-align: end;
+}
+
+.bench-history-detail td {
+  background: var(--panel-raised);
+}
+
+.bench-history-detail-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 2px;
+}
+
+.bench-history-avg {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: 380px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+}
+
+.bench-history-avg-name {
+  color: var(--text-dim);
+}
+
+.bench-history-avg-value {
+  color: var(--text);
+}
+
+.bench-history-avg-value .is-winner {
+  color: var(--accent-green);
+}
+
+.bench-history-message {
+  font-size: 12px;
+  color: var(--text-dim);
+  border-top: 1px solid var(--border-soft);
+  padding-top: 6px;
+  margin-top: 2px;
+}
+
+.is-dim {
+  color: var(--text-faint);
+}
+
+/* ---------- The plan panel ---------- */
+
+/* Names which of the four test kinds the current inputs describe. The tone
+   escalates with the scope of the run, so the tournament reads as the event it
+   is without any extra words. */
+.bench-plan {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
+  border-left: 3px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  margin-bottom: 14px;
+  transition: border-color 0.25s ease;
+}
+
+.bench-plan.is-empty {
+  border-left-color: var(--border-strong);
+}
+
+.bench-plan.is-single { border-left-color: var(--accent-blue); }
+.bench-plan.is-configs { border-left-color: var(--accent-green); }
+.bench-plan.is-models { border-left-color: var(--accent-amber); }
+.bench-plan.is-tournament { border-left-color: var(--accent-violet); }
+
+.bench-plan-badge {
+  font-size: 13.5px;
+  font-weight: 700;
+  padding: 5px 14px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.bench-plan.is-single .bench-plan-badge {
+  color: var(--accent-blue);
+  background: var(--accent-blue-dim);
+}
+
+.bench-plan.is-configs .bench-plan-badge {
+  color: var(--accent-green);
+  background: var(--accent-green-dim);
+}
+
+.bench-plan.is-models .bench-plan-badge {
+  color: var(--accent-amber);
+  background: var(--accent-amber-dim);
+}
+
+.bench-plan.is-tournament .bench-plan-badge {
+  color: var(--accent-violet);
+  background: var(--accent-violet-dim);
+}
+
+.bench-plan-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.bench-plan-note {
+  font-size: 12.5px;
+  color: var(--text-dim);
+  flex: 1;
+  min-width: 0;
+}
+
+/* The factors behind the total, as one mono line — 2 models × 1 config ×
+   3 prompts × 2 reps = 12 — so the arithmetic of a run is checkable at a
+   glance rather than buried in a sentence. */
+.bench-plan-counts {
+  flex-basis: 100%;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-faint);
+  border-top: 1px solid var(--border-soft);
+  padding-top: 8px;
+  margin-top: 2px;
+}
+
+/* ---------- The stats strip ---------- */
+
+/* One quiet row under the plan: the inputs a run is built from and the total
+   they add up to. Values first, labels under them, so scanning top-to-bottom
+   reads the numbers before the words. */
+.bench-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 130px), 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.bench-stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  padding: 10px 13px;
+}
+
+.bench-stat-card-value {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.bench-stat-card-label {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-faint);
+}
+
+.bench-stat-card.is-unknown .bench-stat-card-value {
+  color: var(--text-faint);
+}
+
+.bench-stat-card.is-strong .bench-stat-card-value {
+  color: var(--accent-blue);
+}
+
+.bench-stat-card.is-good .bench-stat-card-value {
+  color: var(--accent-green);
+}
+
+.bench-stat-card.is-bad .bench-stat-card-value {
+  color: var(--accent-red);
+}
+
+/* ---------- Tournament pairing ---------- */
+
+/* Only shown for the tournament, where each model runs under its own
+   configuration rather than a shared one. */
+.bench-pairing {
+  margin-top: 14px;
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  padding: 13px 16px;
+}
+
+.bench-pairing-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 10px;
+}
+
+.bench-pairing-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.bench-pairing-note {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.bench-pairing-rows {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 9px;
+}
+
+.bench-pairing-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bench-pairing-model {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bench-pairing-select {
+  flex: 0 1 170px;
+  padding: 5px 9px;
+  font-size: 12px;
+}
+
+.bench-models-empty {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+/* ---------- Model comparison drawer ---------- */
+
+/* Tick-list of installed models. :has() colours the whole chip once its
+   checkbox is ticked, which reads faster than a bare checkbox row. */
+.bench-models-panel {
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  padding: 13px 15px;
+  min-height: 64px;
+}
+
+.bench-models-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.bench-models-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  padding: 5px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-dim);
+  user-select: none;
+}
+
+.bench-models-item:hover {
+  border-color: var(--border-strong);
+}
+
+.bench-models-item:has(input:checked) {
+  border-color: var(--accent-blue);
+  background: var(--accent-blue-dim);
+  color: var(--accent-blue);
+}
+
+.bench-models-item input {
+  accent-color: var(--accent-blue);
+}
+
+.bench-models-status {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.bench-models-status.is-good {
+  color: var(--accent-green);
+}
+
+.bench-models-status.is-bad {
+  color: var(--accent-amber);
 }
 
 
@@ -830,3 +1553,94 @@
 
 
 
+
+/* ---------- Keep the winner as a model ---------- */
+
+/* The apply form rides under the verdict: a name field with a suggested
+   model-style name, and one button. Quiet on purpose — it is a follow-up
+   action, not the finding. */
+.bench-apply {
+  background: var(--panel);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 11px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.bench-apply-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.bench-apply-row {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.bench-apply-row .input {
+  flex: 1;
+  min-width: 200px;
+  padding: 6px 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.bench-apply-hint {
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+/* ---------- Output-speed chart ---------- */
+
+/* An SVG bar chart: one bar per configuration, longest at the top, each with
+   a darker band as wide as its measured noise. Bars for the also-rans render
+   at reduced opacity so the winner reads first. */
+.bench-chart-wrap {
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+
+.bench-chart-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.bench-chart svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  margin-top: 10px;
+  font-family: var(--font-mono);
+}
+
+.bench-chart-label {
+  font-size: 12px;
+  fill: var(--text-dim);
+}
+
+.bench-chart-value {
+  font-size: 12px;
+  fill: var(--text-dim);
+}
+
+.bench-chart-value.is-winner {
+  fill: var(--text);
+  font-weight: 700;
+}
+
+.bench-chart-caption {
+  font-size: 11px;
+  color: var(--text-faint);
+  display: block;
+  margin-top: 8px;
+}

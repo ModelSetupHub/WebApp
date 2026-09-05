@@ -6,6 +6,8 @@
 
 import { escapeHtml } from "../lib/format.js";
 import { t, tn } from "../lib/i18n.js";
+import { setButtonBusy, toast } from "../lib/toast.js";
+import { postJson } from "../lib/api.js";
 import { indexOfName, seriesColor } from "./benchmark_store.js";
 import { optionChips } from "./benchmark_render.js";
 
@@ -37,7 +39,42 @@ const METRICS = [
     better: "low",
     digits: 2,
   },
+  {
+    key: "average_ttft_seconds",
+    title: "bench.metricTtft",
+    note: "bench.metricTtftNote",
+    short: "bench.metricTtftShort",
+    better: "low",
+    digits: 3,
+  },
 ];
+
+/**
+ * Derive the comparison-level TTFT average from the per-prompt rows.
+ *
+ * Core times the first streamed token per prompt; the four-metric layout wants
+ * it averaged per configuration like the other three metrics, which Core's
+ * summary does not carry yet, so the mean is taken here from exactly the rows
+ * that reported one.
+ *
+ * @param {Array<object>} tests Tests from compare_tests, updated in place.
+ */
+function deriveTtftAverages(tests) {
+  tests.forEach((test) => {
+    const values = (test.results || [])
+      .filter(
+        (row) =>
+          row.success &&
+          row.ttft_seconds !== null &&
+          row.ttft_seconds !== undefined
+      )
+      .map((row) => row.ttft_seconds);
+
+    test.summary.average_ttft_seconds = values.length
+      ? values.reduce((sum, value) => sum + value, 0) / values.length
+      : null;
+  });
+}
 
 /**
  * Format a number for display, or an em dash when it is missing.
@@ -54,6 +91,35 @@ function num(value, digits) {
     return "—";
   }
   return Number(value).toFixed(digits);
+}
+
+/**
+ * Format a metric as its mean with the noise band the repetitions measured.
+ *
+ * The spread is the run-to-run noise: an average without it is only half the
+ * finding, since two configurations a hair apart may be naming the same speed.
+ * Core reports the noise of an average under the base metric's name (the
+ * output-speed noise lands on "output_tokens_per_second_stddev"), and a test
+ * measured once has no spread at all, getting the bare number.
+ *
+ * @param {object} summary One test's summary statistics.
+ * @param {object} metric Metric descriptor.
+ * @returns {string} Display text such as "12.4 ± 0.3".
+ */
+function numWithNoise(summary, metric) {
+  const mean = num(summary[metric.key], metric.digits);
+
+  if (summary[metric.key] === null || summary[metric.key] === undefined) {
+    return mean;
+  }
+
+  const spread = summary[`${metric.key.replace(/^average_/, "")}_stddev`];
+
+  if (spread === null || spread === undefined) {
+    return mean;
+  }
+
+  return `${mean} ± ${Number(spread).toFixed(metric.digits)}`;
 }
 
 /**
@@ -131,9 +197,9 @@ function metricBars(tests) {
 
         return `
           <div class="bench-bar-row" style="--series-color:${testColor(test, position)}">
-            <span class="bench-bar-name" dir="ltr" title="${escapeHtml(test.name)}">${escapeHtml(test.name)}</span>
+            <span class="bench-bar-name" dir="ltr">${escapeHtml(test.name)}</span>
             <span class="bench-bar-value${isBest ? " is-best" : ""}${missing ? " is-empty" : ""}" dir="ltr">
-              ${escapeHtml(num(value, metric.digits))}
+              ${escapeHtml(numWithNoise(test.summary, metric))}
             </span>
             <span class="bench-bar-track">
               <span class="bench-bar-fill" style="width:${width.toFixed(1)}%"></span>
@@ -171,7 +237,7 @@ function summaryTable(tests) {
         const isBest =
           value !== null && value !== undefined && value === bests[index] && tests.length > 1;
         return `<td class="is-number${isBest ? " is-best" : ""}" dir="ltr">${escapeHtml(
-          num(value, metric.digits)
+          numWithNoise(test.summary, metric)
         )}</td>`;
       }).join("");
 
@@ -211,12 +277,17 @@ function summaryTable(tests) {
  * Build the verdict callout naming the configuration to keep.
  *
  * Output speed decides it: it is the metric a user of the model actually waits
- * on, and response time follows from it for a fixed prompt set.
+ * on, and response time follows from it for a fixed prompt set. When the
+ * comparison measured each prompt more than once, Core's own significance
+ * assessment is shown under the verdict — it is the part that says whether the
+ * gap survives the noise, which is the difference between a finding and a
+ * coin flip.
  *
  * @param {Array<object>} tests Tests from compare_tests.
+ * @param {object|null} significance The result's significance assessment.
  * @returns {string} HTML markup.
  */
-function verdict(tests) {
+function verdict(tests, significance) {
   const metric = METRICS[0];
   const best = bestValue(tests, metric);
 
@@ -242,10 +313,42 @@ function verdict(tests) {
     const runnerUp = Math.max(...rates);
     const gain = runnerUp > 0 ? ((best - runnerUp) / runnerUp) * 100 : 0;
 
-    note =
-      gain >= 0.5
-        ? t("bench.verdictGain", { percent: gain.toFixed(1) })
-        : t("bench.verdictTied");
+    // The noise assessment overrides the raw gain: announcing "12% faster"
+    // above an assessment that says the gap is within noise would answer the
+    // question twice with opposite answers.
+    if (significance && significance.significant === false) {
+      note = t("bench.verdictWithinNoise");
+    } else if (gain >= 0.5) {
+      note = t("bench.verdictGain", { percent: gain.toFixed(1) });
+    } else {
+      note = t("bench.verdictTied");
+    }
+  }
+
+  let assessment = "";
+
+  if (significance) {
+    const tone =
+      significance.significant === true
+        ? "is-good"
+        : significance.significant === false
+          ? "is-tied"
+          : "is-unmeasured";
+
+    const label =
+      significance.significant === true
+        ? t("bench.significanceReal")
+        : significance.significant === false
+          ? t("bench.significanceNoise")
+          : t("bench.significanceUnknown");
+
+    const message = significance.message || "";
+
+    assessment = `
+      <div class="bench-significance ${tone}">
+        <span class="bench-significance-label">${escapeHtml(label)}</span>
+        <span class="bench-significance-message" dir="auto">${escapeHtml(message)}</span>
+      </div>`;
   }
 
   return `
@@ -255,6 +358,7 @@ function verdict(tests) {
         <div class="bench-verdict-name" dir="ltr">${escapeHtml(winner.name)}</div>
         <div class="bench-verdict-note">${escapeHtml(note)}</div>
       </div>
+      ${assessment}
     </div>`;
 }
 
@@ -291,6 +395,48 @@ function detail(test, position) {
               result.response || t("bench.emptyResponse")
             )}</pre>`;
 
+      // The machine readings are optional: they are absent on a machine
+      // without an NVIDIA GPU, or when a generation produced no content, and
+      // are shown only when Core actually reported them.
+      const measurements = [
+        {
+          key: "ttft_seconds",
+          digits: 3,
+          stat: "bench.statTtft",
+        },
+        {
+          key: "vram_used_mb",
+          digits: 0,
+          stat: "bench.statVram",
+        },
+        {
+          key: "gpu_temperature_c",
+          digits: 1,
+          stat: "bench.statTemperature",
+        },
+        {
+          key: "gpu_clock_mhz",
+          digits: 0,
+          stat: "bench.statClock",
+        },
+      ]
+        .map((reading) => ({ ...reading, value: result[reading.key] }))
+        .filter((reading) => reading.value !== null && reading.value !== undefined);
+
+      const measurementStats = measurements
+        .map(
+          (reading) => `
+            <span class="bench-stat"><b dir="ltr">${num(
+              reading.value,
+              reading.digits
+            )}</b> ${escapeHtml(t(reading.stat))}</span>`
+        )
+        .join("");
+
+      const measurementBlock = measurementStats
+        ? `<div class="bench-prompt-machine">${measurementStats}</div>`
+        : "";
+
       return `
         <div class="bench-prompt">
           <div class="bench-prompt-head">
@@ -304,6 +450,7 @@ function detail(test, position) {
             <span class="bench-stat"><b dir="ltr">${result.output_tokens}</b> ${escapeHtml(t("bench.statOutputTokens"))}</span>
             <span class="bench-stat"><b dir="ltr">${result.prompt_tokens}</b> ${escapeHtml(t("bench.statPromptTokens"))}</span>
           </div>
+          ${measurementBlock}
           ${output}
         </div>`;
     })
@@ -329,40 +476,273 @@ function detail(test, position) {
 }
 
 /**
+ * Build the SVG output-speed chart.
+ *
+ * One bar per configuration, longest at the top, each carrying a darker band
+ * as wide as its measured noise — two bars whose bands overlap are saying the
+ * same speed, which the numbers below can only imply. The winner's bar gets
+ * the full-strength series colour; the rest render at reduced opacity so the
+ * eye lands on the finding first.
+ *
+ * @param {Array<object>} tests Tests from compare_tests.
+ * @returns {string} SVG markup, or "" when nothing measurable was reported.
+ */
+function outputSpeedChart(tests) {
+  const measured = tests
+    .map((test, position) => ({
+      name: test.name,
+      rate: test.summary.average_output_tokens_per_second,
+      noise: test.summary.output_tokens_per_second_stddev,
+      position,
+    }))
+    .filter((entry) => entry.rate !== null && entry.rate !== undefined);
+
+  if (measured.length === 0) {
+    return "";
+  }
+
+  measured.sort((a, b) => b.rate - a.rate);
+
+  const best = measured[0].rate;
+  const scaleMax = Math.max(
+    best +
+      measured.reduce((max, entry) => {
+        const noise = entry.noise ?? 0;
+        return Math.max(max, entry.rate + noise);
+      }, 0),
+    best * 1.05
+  ) || 1;
+
+  const plotX = 150;
+  const plotWidth = 380;
+  const rowHeight = 42;
+  const barHeight = 20;
+  const width = 640;
+  const height = measured.length * rowHeight + 30;
+
+  const scale = (value) => (value / scaleMax) * plotWidth;
+
+  const rows = measured
+    .map((entry, index) => {
+      const y = index * rowHeight + 14;
+      const barWidth = Math.max(scale(entry.rate), 2);
+      const color = seriesColor(
+        indexOfName(entry.name) === -1 ? entry.position : indexOfName(entry.name)
+      );
+      const isWinner = index === 0;
+      const opacity = isWinner ? 1 : 0.55;
+
+      // The noise band centres on the mean and spans one stddev either way.
+      const noise = entry.noise ?? 0;
+      const bandStart = scale(Math.max(entry.rate - noise, 0));
+      const bandWidth = Math.max(scale(entry.rate + noise) - bandStart, 1);
+
+      const valueText = Number(entry.rate).toFixed(1);
+      const valueX = plotX + barWidth + 8;
+
+      return `
+        <text x="0" y="${y + barHeight / 2 + 4}" class="bench-chart-label"
+              title="${escapeHtml(entry.name)}">${
+                escapeHtml(entry.name.length > 20 ? `${entry.name.slice(0, 19)}…` : entry.name)
+              }</text>
+        <rect x="${plotX}" y="${y}" width="${plotWidth}" height="${barHeight}"
+              rx="4" fill="none" stroke="var(--border-soft)"></rect>
+        <rect x="${plotX}" y="${y}" width="${barWidth.toFixed(1)}" height="${barHeight}"
+              rx="4" fill="${color}" opacity="${opacity}"></rect>
+        ${
+          noise > 0
+            ? `<rect x="${(plotX + bandStart).toFixed(1)}" y="${y}" width="${bandWidth.toFixed(1)}"
+                 height="${barHeight}" fill="#000" opacity="0.28"></rect>`
+            : ""
+        }
+        <text x="${Math.min(valueX, width - 8)}" y="${y + barHeight / 2 + 4}"
+              class="bench-chart-value${isWinner ? " is-winner" : ""}">${valueText}</text>`;
+    })
+    .join("");
+
+  return `
+    <figure class="bench-chart">
+      <figcaption class="bench-chart-title">${escapeHtml(
+        t("bench.chartTitle")
+      )}</figcaption>
+      <svg viewBox="0 0 ${width} ${height}" role="img"
+           aria-label="${escapeHtml(t("bench.chartAria"))}">
+        ${rows}
+      </svg>
+      <span class="bench-chart-caption">${escapeHtml(t("bench.chartCaption"))}</span>
+    </figure>`;
+}
+
+/**
  * Paint a finished comparison.
  *
  * @param {HTMLElement} el Container element.
  * @param {object} job Finished job snapshot from the status endpoint.
  */
-export function renderResults(el, job) {
-  const tests = (job.result && job.result.tests) || [];
+/**
+ * Build the "keep the winner as a model" form.
+ *
+ * A comparison that names a winner is only half a finding; this turns the
+ * other half into an action — creating a model copy whose Modelfile carries
+ * the winning options, without touching the source model. Only offered for
+ * configuration comparisons: a cross-model run's winner is a model, and a
+ * single run has nothing to compare.
+ *
+ * @param {object} job Finished job snapshot.
+ * @param {string} winnerName Name of the fastest test.
+ * @returns {string} HTML markup, or "" when the form does not apply.
+ */
+function applyForm(job, winnerName) {
+  if (job.cross_model || (job.result.tests || []).length < 2) {
+    return "";
+  }
+
+  const suggested = `${(job.result.model || "model").split(":")[0]}-${winnerName}`
+    .replace(/[^a-zA-Z0-9._-]/g, "-")
+    .slice(0, 64);
+
+  return `
+    <div class="bench-apply">
+      <label class="bench-apply-label" for="bench-apply-name">
+        ${escapeHtml(t("bench.applyLabel"))}
+      </label>
+      <div class="bench-apply-row">
+        <input class="input is-ltr" id="bench-apply-name" dir="ltr"
+               value="${escapeHtml(suggested)}" spellcheck="false" autocomplete="off">
+        <button type="button" class="btn btn-sm btn-primary" data-apply-winner="${escapeHtml(
+          winnerName
+        )}">${escapeHtml(t("bench.applyButton"))}</button>
+      </div>
+      <span class="bench-apply-hint">${escapeHtml(t("bench.applyHint"))}</span>
+    </div>`;
+}
+
+/**
+ * Bind the keep-winner form: send the winning options to Core's
+ * configure_model through the apply endpoint, and report what came back.
+ *
+ * @param {HTMLElement} el Results container.
+ * @param {object} job Finished job snapshot.
+ */
+function bindApply(el, job) {
+  const button = el.querySelector("[data-apply-winner]");
+
+  if (!button) {
+    return;
+  }
+
+  const input = el.querySelector("#bench-apply-name");
+
+  button.addEventListener("click", async () => {
+    const restore = setButtonBusy(button);
+
+    const winnerTest = (job.result.tests || []).find(
+      (test) => test.name === job.winner_name
+    );
+
+    try {
+      const { data } = await postJson("/api/benchmark/apply", {
+        model: job.result.model,
+        target: input.value.trim(),
+        options: winnerTest ? winnerTest.configuration : {},
+      });
+
+      toast("success", t("bench.applied"), String(data || "").slice(0, 160));
+    } catch (error) {
+      toast("error", t("bench.applyFailed"), error.message);
+    } finally {
+      restore();
+    }
+  });
+}
+
+/**
+ * Paint a finished comparison.
+ *
+ * Both comparison kinds land here: a configuration comparison (one model,
+ * several configurations) and a cross-model one (several models, one shared
+ * configuration). Core's result shape is the same for the two — a tests list
+ * whose entries carry per-prompt rows and a summary — so the only real
+ * difference is which title the results head shows.
+ *
+ * @param {HTMLElement} el Container element.
+ * @param {object} job Finished job snapshot from the status endpoint.
+ * @param {object} [options] Behaviour switches. discardEndpoint is the clear
+ *     endpoint the discard button posts to — the cross-model drawer passes
+ *     its own, since the two jobs live on different endpoints.
+ */
+export function renderResults(el, job, {
+  discardEndpoint = "/api/benchmark/clear",
+  downloadBase = null,
+} = {}) {
+  const result = job.result || {};
+  const tests = result.tests || [];
 
   if (tests.length === 0) {
     el.innerHTML = `<div class="empty-state">${escapeHtml(t("bench.noResults"))}</div>`;
     return;
   }
 
+  deriveTtftAverages(tests);
+
+  const significance = result.significance || null;
+  const reps = job.repetitions || 1;
+  const head = job.cross_model
+    ? t("bench.resultsHeadModels", { n: tests.length })
+    : t("bench.resultsHead", { model: result.model, n: tests.length });
+
+  // The winner the apply form defaults to: same rule the verdict uses —
+  // fastest average generation rate. Shared through the job so bindApply can
+  // find the winning test's options without recomputing.
+  const winnerTest = tests
+    .filter((test) => test.summary.average_output_tokens_per_second !== null)
+    .sort(
+      (a, b) =>
+        b.summary.average_output_tokens_per_second -
+        a.summary.average_output_tokens_per_second
+    )[0];
+
+  job.winner_name = winnerTest ? winnerTest.name : null;
+  const winnerName = job.winner_name;
+
   el.innerHTML = `
     <div class="bench-results">
       <div class="bench-results-head">
         <div>
-          <div class="bench-results-title">${escapeHtml(
-            t("bench.resultsHead", { model: job.result.model, n: tests.length })
-          )}</div>
+          <div class="bench-results-title">${escapeHtml(head)}</div>
           <div class="bench-results-sub">${escapeHtml(
             t("bench.resultsSub", {
               prompts: job.prompts.length,
               seconds: num(job.elapsed_seconds, 1),
               time: job.finished_at || "",
+              reps,
             })
           )}</div>
         </div>
-        <button type="button" class="btn btn-sm" id="btn-bench-discard">${escapeHtml(
-          t("bench.discardResults")
-        )}</button>
+        <div class="bench-results-tools">
+          ${job.history_id ? `<span class="chip chip-saved">${escapeHtml(t("bench.savedToHistory"))}</span>` : ""}
+          <div class="btn-row">
+            ${
+              downloadBase
+                ? `<button type="button" class="btn btn-sm" data-results-download="csv" title="${escapeHtml(t("bench.exportCsvTitle"))}">${escapeHtml(
+                    t("bench.exportCsv")
+                  )}</button>
+            <button type="button" class="btn btn-sm" data-results-download="json" title="${escapeHtml(t("bench.exportJsonTitle"))}">${escapeHtml(
+              t("bench.exportJson")
+            )}</button>`
+                : ""
+            }
+            <button type="button" class="btn btn-sm" data-results-discard>${escapeHtml(
+              t("bench.discardResults")
+            )}</button>
+          </div>
+        </div>
       </div>
 
-      ${verdict(tests)}
+      ${verdict(tests, significance)}
+      ${applyForm(job, winnerName)}
+
+      <div class="bench-chart-wrap">${outputSpeedChart(tests)}</div>
 
       <div class="bench-metrics">${metricBars(tests)}</div>
 
@@ -378,4 +758,11 @@ export function renderResults(el, job) {
       head.setAttribute("aria-expanded", open ? "true" : "false");
     });
   });
+
+  return {
+    discardButton: el.querySelector("[data-results-discard]"),
+    downloadButtons: downloadBase
+      ? [...el.querySelectorAll("[data-results-download]")]
+      : [],
+  };
 }

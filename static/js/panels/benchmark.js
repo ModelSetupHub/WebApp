@@ -1,10 +1,21 @@
-// Benchmark tab controller: assemble a set of configurations, run compare_tests
-// in the background, and poll until it settles.
+// Benchmark tab controller.
 //
-// The run is a background job on the server, so the browser's job is to keep the
-// builder and the poller in agreement about what is happening: while a job is
-// running every control that would change the setup is disabled, because the run
-// already has its own copy of it.
+// One set of inputs decides everything: the prompts, the models ticked, and
+// the configurations built. What kind of test that adds up to follows from the
+// counts rather than from a mode the user has to pick first —
+//
+//   one model  · no or one configuration  → measure that model
+//   one model  · several configurations   → compare the configurations
+//   many models · no or one configuration → compare the models
+//   many models · several configurations  → tournament: each model races
+//                                           under the configuration paired
+//                                           with it
+//
+// The plan panel names the kind before the run starts, and the run button
+// dispatches to whichever endpoint that kind belongs to: the configuration
+// comparison for a single model, the model comparison for several. Both
+// answer with the same job shape, so progress, results and history are one
+// code path from here on.
 
 import { api, postJson } from "../lib/api.js";
 import { escapeHtml, hideAlert, showAlert } from "../lib/format.js";
@@ -12,6 +23,7 @@ import { t, tn } from "../lib/i18n.js";
 import { getInstalledModels, getOllamaStatus } from "../lib/state.js";
 import { setButtonBusy, toast } from "../lib/toast.js";
 import {
+  addConfiguration,
   addConfigurations,
   clearConfigurations,
   duplicateConfiguration,
@@ -20,7 +32,6 @@ import {
   removeConfiguration,
   toPayload,
   updateConfiguration,
-  addConfiguration,
 } from "./benchmark_store.js";
 import {
   buildEditor,
@@ -36,19 +47,44 @@ import { renderResults } from "./benchmark_results.js";
 // slow; the elapsed clock is interpolated between polls instead.
 const POLL_INTERVAL_MS = 1500;
 
+const MAX_MODELS = 6;
+
+// The two endpoints a run can go to. Which one is chosen follows from the
+// model count, and both answer with the same job snapshot.
+const SINGLE = {
+  run: "/api/benchmark/run",
+  status: "/api/benchmark/status",
+  cancel: "/api/benchmark/cancel",
+  clear: "/api/benchmark/clear",
+};
+
+const MULTI = {
+  run: "/api/models-compare/run",
+  status: "/api/models-compare/status",
+  cancel: "/api/models-compare/cancel",
+  clear: "/api/models-compare/clear",
+};
+
 const errorEl = document.getElementById("bench-error");
 const metaEl = document.getElementById("bench-meta");
+const promptsEl = document.getElementById("bench-prompts");
+const repetitionsEl = document.getElementById("bench-repetitions");
+const includeOutputEl = document.getElementById("bench-include-output");
 const cardsEl = document.getElementById("bench-cards");
 
-const modelEl = document.getElementById("bench-model");
-const promptsEl = document.getElementById("bench-prompts");
-const includeOutputEl = document.getElementById("bench-include-output");
+const modelListEl = document.getElementById("bench-models-list");
+const modelCountEl = document.getElementById("bench-model-count");
+const modelsBadgeEl = document.getElementById("bench-models-badge");
 
 const configListEl = document.getElementById("bench-config-list");
 const configCountEl = document.getElementById("bench-config-count");
 const addBtn = document.getElementById("btn-config-add");
 const importBtn = document.getElementById("btn-config-import");
 const clearBtn = document.getElementById("btn-config-clear");
+const promptCountEl = document.getElementById("bench-prompt-count");
+
+const pairingEl = document.getElementById("bench-pairing");
+const pairingRowsEl = document.getElementById("bench-pairing-rows");
 
 const editorEl = document.getElementById("bench-editor");
 const editorTitleEl = document.getElementById("bench-editor-title");
@@ -60,12 +96,20 @@ const fileEl = document.getElementById("bench-file");
 const pasteEl = document.getElementById("bench-paste-text");
 const previewEl = document.getElementById("bench-import-preview");
 
+const planEl = document.getElementById("bench-plan");
 const runBtn = document.getElementById("btn-bench-run");
 const runStateEl = document.getElementById("bench-run-state");
 const runNoteEl = document.getElementById("bench-run-note");
 const progressEl = document.getElementById("bench-progress");
 const resultsEl = document.getElementById("bench-results");
 const exportBtn = document.getElementById("btn-bench-export");
+
+// Models ticked, in tick order: a comparison measures them in this sequence.
+let selectedModels = [];
+
+// Tournament pairing: model name → configuration id. Only consulted when the
+// plan is a tournament; everything else runs one shared configuration.
+let pairing = new Map();
 
 // Id of the configuration being edited, or null when the editor is adding a new
 // one. Options the schema has no field for are held here across a save.
@@ -77,6 +121,10 @@ let pendingImport = null;
 
 let pollTimer = null;
 let isRunning = false;
+
+// Which endpoint the job currently on screen belongs to, so cancel and discard
+// reach the right service after a reload.
+let activeEndpoints = SINGLE;
 
 /**
  * Read the prompt textarea into a list.
@@ -93,51 +141,303 @@ function readPrompts() {
     .filter(Boolean);
 }
 
-/** Paint the four summary cards at the top of the tab. */
-function renderCards() {
+/** Read the repetitions field, clamped to the range the server accepts. */
+function readRepetitions() {
+  const value = Number.parseInt(repetitionsEl.value, 10);
+  return Number.isInteger(value) && value >= 1 ? Math.min(value, 10) : 1;
+}
+
+/**
+ * Work out which of the four test kinds the current inputs describe.
+ *
+ * The kind is derived, never chosen: it follows from how many models are
+ * ticked and how many configurations exist, which is the whole point of the
+ * unified form.
+ *
+ * @returns {{kind: string, models: number, configs: number, runs: number}}
+ *     The plan: its kind key, the counts behind it, and the number of
+ *     generations it will perform.
+ */
+function readPlan() {
+  const models = selectedModels.length;
+  const configs = getConfigurations().length;
+  const prompts = readPrompts().length;
+  const reps = readRepetitions();
+
+  let kind = "none";
+
+  if (models === 1) {
+    kind = configs > 1 ? "configs" : "single";
+  } else if (models > 1) {
+    kind = configs > 1 ? "tournament" : "models";
+  }
+
+  // A tournament runs one configuration per model; every other kind runs each
+  // configuration (or the single default) against the one model.
+  const passes =
+    kind === "configs" ? configs : kind === "tournament" ? models : models;
+
+  return {
+    kind,
+    models,
+    configs,
+    prompts,
+    reps,
+    runs: passes * prompts * reps,
+  };
+}
+
+/**
+ * Paint the model tick-list from the installed models.
+ *
+ * The old summary cards are gone: the plan panel at the top of the tab carries
+ * the same counts, and the server status lives in its own tab, so the cards
+ * repeated what the page already said.
+ */
+function renderModelList() {
+  const installed = getInstalledModels();
+
+  if (installed.length === 0) {
+    modelListEl.innerHTML = `<span class="bench-models-empty">${escapeHtml(
+      t("bench.modelsNoneInstalled")
+    )}</span>`;
+    return;
+  }
+
+  modelListEl.innerHTML = installed
+    .map(
+      (model) => `
+        <label class="bench-models-item">
+          <input type="checkbox" value="${escapeHtml(model)}"
+                 ${selectedModels.includes(model) ? "checked" : ""}
+                 ${isRunning ? "disabled" : ""}>
+          <span dir="ltr">${escapeHtml(model)}</span>
+        </label>`
+    )
+    .join("");
+
+  modelListEl.querySelectorAll("input[type=checkbox]").forEach((box) => {
+    box.addEventListener("change", () => {
+      if (box.checked) {
+        if (selectedModels.length >= MAX_MODELS) {
+          box.checked = false;
+          toast(
+            "error",
+            t("bench.modelsTooMany"),
+            t("bench.modelsTooManyBody", { n: MAX_MODELS })
+          );
+          return;
+        }
+
+        // Tick order is run order, so a newly ticked model goes last.
+        selectedModels.push(box.value);
+      } else {
+        selectedModels = selectedModels.filter((name) => name !== box.value);
+        pairing.delete(box.value);
+      }
+
+      renderSetup();
+    });
+  });
+}
+
+/**
+ * Paint the tournament's pairing table, or hide it when the plan is not one.
+ *
+ * A tournament is the only kind where a model does not share the run's single
+ * configuration, so this is the only place a per-model choice makes sense.
+ */
+function renderPairing() {
+  const plan = readPlan();
   const configurations = getConfigurations();
-  const prompts = readPrompts();
-  const runs = configurations.length * prompts.length;
+
+  if (plan.kind !== "tournament") {
+    pairingEl.classList.add("is-hidden");
+    pairingRowsEl.innerHTML = "";
+    return;
+  }
+
+  pairingEl.classList.remove("is-hidden");
+
+  pairingRowsEl.innerHTML = selectedModels
+    .map((model, index) => {
+      // Unpaired models fall to the configuration at their own position, so a
+      // tournament is runnable the moment it is described.
+      const fallback = configurations[index % configurations.length];
+      const chosen = pairing.get(model) ?? fallback.id;
+
+      const options = configurations
+        .map(
+          (config) =>
+            `<option value="${config.id}" ${
+              config.id === chosen ? "selected" : ""
+            }>${escapeHtml(config.name)}</option>`
+        )
+        .join("");
+
+      return `
+        <div class="bench-pairing-row">
+          <span class="bench-pairing-model" dir="ltr">${escapeHtml(model)}</span>
+          <select class="input is-ltr bench-pairing-select" dir="ltr"
+                  data-pair-model="${escapeHtml(model)}" ${isRunning ? "disabled" : ""}>
+            ${options}
+          </select>
+        </div>`;
+    })
+    .join("");
+
+  pairingRowsEl.querySelectorAll("[data-pair-model]").forEach((select) => {
+    select.addEventListener("change", () => {
+      pairing.set(select.dataset.pairModel, Number(select.value));
+      renderPlan();
+    });
+  });
+}
+
+/** Paint the plan panel: which of the four kinds the inputs describe. */
+function renderPlan() {
+  const plan = readPlan();
+
+  if (plan.kind === "none") {
+    planEl.className = "bench-plan is-empty";
+    planEl.innerHTML = `
+      <span class="bench-plan-label">${escapeHtml(t("bench.planNoneLabel"))}</span>
+      <span class="bench-plan-note">${escapeHtml(t("bench.planNoneNote"))}</span>`;
+    return;
+  }
+
+  // The factors behind the total, in run order. Configurations only appear
+  // when the plan actually varies them; the repetition count only earns its
+  // place when it is above one.
+  const factors = [];
+
+  factors.push(
+    tn(plan.models, "bench.factorModel", "bench.factorModels", {
+      n: plan.models,
+    })
+  );
+
+  if (plan.kind === "configs") {
+    factors.push(
+      tn(plan.configs, "bench.factorConfig", "bench.factorConfigs", {
+        n: plan.configs,
+      })
+    );
+  }
+
+  factors.push(
+    tn(plan.prompts, "bench.factorPrompt", "bench.factorPrompts", {
+      n: plan.prompts,
+    })
+  );
+
+  if (plan.reps > 1) {
+    factors.push(
+      tn(plan.reps, "bench.factorRep", "bench.factorReps", { n: plan.reps })
+    );
+  }
+
+  const counts = `<span class="bench-plan-counts" dir="ltr">${escapeHtml(
+    factors.join(" × ")
+  )} = ${plan.runs}</span>`;
+
+  planEl.className = `bench-plan is-${plan.kind}`;
+  planEl.innerHTML = `
+    <span class="bench-plan-badge">${escapeHtml(t(`bench.plan.${plan.kind}`))}</span>
+    <span class="bench-plan-note">${escapeHtml(
+      t(`bench.planNote.${plan.kind}`, {
+        models: plan.models,
+        configs: plan.configs,
+        prompts: plan.prompts,
+        reps: plan.reps,
+        runs: plan.runs,
+      })
+    )}</span>
+    ${counts}`;
+}
+
+/**
+ * Paint the compact stats row under the plan: one line, four numbers — the
+ * inputs a run is built from and the total it adds up to. Deliberately a
+ * single quiet strip rather than a grid of cards, so the page carries one
+ * number display and the plan panel carries the words.
+ */
+/**
+ * Paint the four summary cards in the launch bay: model count, configuration
+ * count, total generations and the server state. The first three echo the
+ * inputs the plan was read from; the last answers whether the button can run.
+ */
+function renderStats() {
+  const plan = readPlan();
   const status = getOllamaStatus();
   const serverUp = status ? status.running : null;
 
-  cardsEl.innerHTML = `
-    <div class="card">
-      <div class="card-label">${escapeHtml(t("bench.cardConfigs"))}</div>
-      <div class="card-value" dir="ltr">${configurations.length}</div>
-      <div class="card-sub">${escapeHtml(t("bench.cardConfigsSub"))}</div>
-    </div>
-    <div class="card">
-      <div class="card-label">${escapeHtml(t("bench.cardPrompts"))}</div>
-      <div class="card-value" dir="ltr">${prompts.length}</div>
-      <div class="card-sub">${escapeHtml(t("bench.cardPromptsSub"))}</div>
-    </div>
-    <div class="card">
-      <div class="card-label">${escapeHtml(t("bench.cardTotalRuns"))}</div>
-      <div class="card-value ${runs > 0 ? "" : "is-unknown"}" dir="ltr">${runs || "—"}</div>
-      <div class="card-sub">${escapeHtml(t("bench.cardTotalRunsSub"))}</div>
-    </div>
-    <div class="card">
-      <div class="card-label">${escapeHtml(t("bench.cardServer"))}</div>
-      ${
+  const stats = [
+    {
+      label: t("bench.statModels"),
+      value: plan.models || "—",
+      tone: plan.models ? "" : "is-unknown",
+    },
+    {
+      label: t("bench.statConfigs"),
+      value: plan.configs || "—",
+      tone: "",
+    },
+    {
+      label: t("bench.statRuns"),
+      value: plan.runs || "—",
+      tone: plan.runs ? "is-strong" : "is-unknown",
+    },
+    {
+      label: t("bench.statServer"),
+      value:
         serverUp === null
-          ? '<div class="card-value is-unknown">—</div>'
-          : `<div class="card-value ${serverUp ? "is-good" : "is-bad"}">${escapeHtml(
-              t(serverUp ? "value.running" : "value.stopped")
-            )}</div>`
-      }
-      <div class="card-sub">${escapeHtml(
-        t(serverUp ? "bench.cardServerReady" : "bench.cardServerNotReady")
-      )}</div>
-    </div>`;
+          ? "—"
+          : t(serverUp ? "value.running" : "value.stopped"),
+      tone:
+        serverUp === null ? "is-unknown" : serverUp ? "is-good" : "is-bad",
+    },
+  ];
+
+  cardsEl.innerHTML = stats
+    .map(
+      (stat) => `
+        <div class="bench-stat-card ${stat.tone}">
+          <span class="bench-stat-card-value" dir="auto">${escapeHtml(
+            String(stat.value)
+          )}</span>
+          <span class="bench-stat-card-label">${escapeHtml(stat.label)}</span>
+        </div>`
+    )
+    .join("");
 }
 
 /** Refresh everything that depends on the current setup. */
 function renderSetup() {
   const configurations = getConfigurations();
+  const prompts = readPrompts();
 
+  renderModelList();
   renderConfigList(configListEl);
-  renderCards();
+  renderPairing();
+  renderPlan();
+  renderStats();
+
+  modelCountEl.textContent =
+    selectedModels.length === 0
+      ? t("bench.noModelsYet")
+      : tn(selectedModels.length, "bench.modelReady", "bench.modelsReadyCount");
+
+  // The models card's badge echoes the count where the eye lands first, and
+  // turns amber the moment two or more models mean the run is a comparison.
+  modelsBadgeEl.textContent =
+    selectedModels.length === 0 ? "" : String(selectedModels.length);
+  modelsBadgeEl.classList.toggle("is-active", selectedModels.length > 1);
+
+  promptCountEl.textContent =
+    prompts.length === 0
+      ? t("bench.noPromptsYet")
+      : tn(prompts.length, "bench.promptReady", "bench.promptsReady");
 
   configCountEl.textContent =
     configurations.length === 0
@@ -146,6 +446,7 @@ function renderSetup() {
 
   clearBtn.disabled = configurations.length === 0 || isRunning;
   exportBtn.disabled = configurations.length === 0;
+  repetitionsEl.disabled = isRunning;
 
   updateRunState();
 }
@@ -160,26 +461,20 @@ function updateRunState() {
     return;
   }
 
-  const configurations = getConfigurations();
-  const prompts = readPrompts();
+  const plan = readPlan();
   const status = getOllamaStatus();
-
   const blockers = [];
 
   if (status && status.running === false) {
     blockers.push(t("bench.missingServer"));
   }
 
-  if (!modelEl.value) {
+  if (plan.models === 0) {
     blockers.push(t("bench.missingModel"));
   }
 
-  if (prompts.length === 0) {
+  if (plan.prompts === 0) {
     blockers.push(t("bench.missingPrompts"));
-  }
-
-  if (configurations.length === 0) {
-    blockers.push(t("bench.missingConfigs"));
   }
 
   if (blockers.length > 0) {
@@ -192,11 +487,9 @@ function updateRunState() {
     return;
   }
 
-  const runs = configurations.length * prompts.length;
-
   runStateEl.className = "control-title is-good";
   runStateEl.textContent = t("bench.ready");
-  runNoteEl.textContent = t("bench.readyNote", { n: runs, model: modelEl.value });
+  runNoteEl.textContent = t("bench.readyNote", { n: plan.runs });
   runBtn.disabled = false;
 }
 
@@ -223,6 +516,7 @@ function toggleImport(open) {
   importEl.classList.toggle("is-hidden", !open);
 
   if (open) {
+    toggleCardBody(document.getElementById("bench-card-configs"), true);
     editorEl.classList.add("is-hidden");
   } else {
     clearPreview();
@@ -231,6 +525,7 @@ function toggleImport(open) {
 
 /** Put the editor into "add a new configuration" mode. */
 function openForAdd() {
+  toggleCardBody(document.getElementById("bench-card-configs"), true);
   editingId = null;
   editingExtras = {};
   editorTitleEl.textContent = t("bench.editorAdd");
@@ -251,11 +546,67 @@ function openForEdit(id) {
     return;
   }
 
+  toggleCardBody(document.getElementById("bench-card-configs"), true);
   editingId = config.id;
   editingExtras = fillEditor(config);
   editorTitleEl.textContent = t("bench.editorEdit", { name: config.name });
   editorSaveBtn.textContent = t("btn.save");
   toggleEditor(true);
+}
+
+/**
+ * Collapse or open one of the input cards. The head (number, title, live
+ * count) stays visible either way — the body is what folds away, so the page
+ * starts as three quiet summary bars.
+ *
+ * @param {HTMLElement|null} card The card to fold.
+ * @param {boolean} [open] Target state; omitted toggles.
+ */
+function toggleCardBody(card, open) {
+  if (!card) {
+    return;
+  }
+
+  // A collapsed card opens, an open card collapses, unless the caller names a
+  // target state explicitly.
+  const target =
+    open ?? card.classList.contains("is-collapsed");
+
+  card.classList.toggle("is-collapsed", !target);
+
+  const toggle = card.querySelector(".bench-card-toggle");
+
+  if (toggle) {
+    toggle.setAttribute("aria-expanded", target ? "true" : "false");
+  }
+}
+
+/** Start every input card collapsed — the page opens as three summary bars. */
+function initCollapsibleCards() {
+  document
+    .querySelectorAll(".bench-card")
+    .forEach((card) => toggleCardBody(card, false));
+
+  document.querySelectorAll(".bench-card-head").forEach((head) => {
+    // The configs head carries its own buttons (Add/Upload/Clear); those do
+    // their own work and must not fold the card.
+    head.addEventListener("click", (event) => {
+      if (event.target.closest(".bench-card-actions, button, input, select, label")) {
+        return;
+      }
+
+      toggleCardBody(head.closest(".bench-card"));
+    });
+
+    head.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") {
+        return;
+      }
+
+      event.preventDefault();
+      toggleCardBody(head.closest(".bench-card"));
+    });
+  });
 }
 
 function bindEditor() {
@@ -324,6 +675,13 @@ function bindConfigList() {
       }
 
       removeConfiguration(id);
+      // A pairing that named it is stale; the table falls back to position.
+      [...pairing.entries()].forEach(([model, configId]) => {
+        if (configId === id) {
+          pairing.delete(model);
+        }
+      });
+
       renderSetup();
     }
   });
@@ -334,6 +692,7 @@ function bindConfigList() {
     }
 
     clearConfigurations();
+    pairing.clear();
     editingId = null;
     toggleEditor(false);
     renderSetup();
@@ -481,6 +840,7 @@ function applyImport(mode) {
 
   if (mode === "replace") {
     clearConfigurations();
+    pairing.clear();
     editingId = null;
     toggleEditor(false);
   }
@@ -488,13 +848,21 @@ function applyImport(mode) {
   addConfigurations(pendingImport.configurations);
 
   // A file may describe a whole setup, not just configurations. Those fields are
-  // only taken when the user has not already filled them in themselves.
-  if (pendingImport.model && getInstalledModels().includes(pendingImport.model)) {
-    modelEl.value = pendingImport.model;
+  // only taken when the user has not already chosen them themselves.
+  if (
+    pendingImport.model &&
+    getInstalledModels().includes(pendingImport.model) &&
+    selectedModels.length === 0
+  ) {
+    selectedModels = [pendingImport.model];
   }
 
   if (pendingImport.prompts.length > 0 && (mode === "replace" || readPrompts().length === 0)) {
     promptsEl.value = pendingImport.prompts.join("\n\n");
+  }
+
+  if (pendingImport.repetitions && readRepetitions() === 1) {
+    repetitionsEl.value = pendingImport.repetitions;
   }
 
   if (pendingImport.include_output !== null && pendingImport.include_output !== undefined) {
@@ -566,9 +934,10 @@ async function exportSetup() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: modelEl.value,
+        model: selectedModels[0] || "",
         prompts: readPrompts(),
         include_output: includeOutputEl.checked,
+        repetitions: readRepetitions(),
         configurations: toPayload(),
       }),
     });
@@ -598,10 +967,9 @@ async function exportSetup() {
 /**
  * Show or hide the progress bar for a running job.
  *
- * The server reports elapsed time but not how far along it is: compare_tests
- * returns only when every configuration is finished, so there is no per-prompt
- * progress to report. The bar states what is being done and for how long instead
- * of implying a percentage it cannot know.
+ * Core reports each step the run takes — which configuration or model, which
+ * prompt, which repetition — so the bar shows a real percentage and the step
+ * text names the stage.
  *
  * @param {object|null} job Job snapshot, or null to hide the bar.
  */
@@ -612,25 +980,63 @@ function renderProgress(job) {
     return;
   }
 
+  const progress = job.progress || null;
+  const percent = progress ? progress.percent : null;
+
+  let stepLine = "";
+
+  if (progress && progress.phase !== "starting") {
+    stepLine = `<div class="bench-progress-detail">${escapeHtml(
+      t(job.cross_model ? "bench.progressStepModel" : "bench.progressStep", {
+        name: progress.configuration,
+        i: progress.configuration_index,
+        n: progress.configuration_count,
+        p: progress.prompt_index,
+        pn: progress.prompt_count,
+        r: progress.repetition || 1,
+        rn: progress.repetition_count,
+      })
+    )}</div>`;
+  } else if (progress) {
+    stepLine = `<div class="bench-progress-detail">${escapeHtml(
+      t("bench.progressStarting")
+    )}</div>`;
+  }
+
+  const bar =
+    percent === null
+      ? ""
+      : `<div class="bench-progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${percent}">
+          <span class="bench-progress-track">
+            <span class="bench-progress-fill" style="width:${percent}%"></span>
+          </span>
+          <span class="bench-progress-percent" dir="ltr">${percent}%</span>
+        </div>`;
+
   progressEl.classList.remove("is-hidden");
   progressEl.innerHTML = `
-    <span class="spinner"></span>
-    <span class="bench-progress-text">${escapeHtml(
-      t("bench.progressText", {
-        runs: job.planned_runs,
-        configs: job.configurations.length,
-        model: job.model,
-      })
-    )}</span>
-    <span class="bench-progress-meta">${escapeHtml(
-      t("bench.progressMeta", {
-        time: job.started_at,
-        seconds: Math.round(job.elapsed_seconds),
-      })
-    )}</span>
-    <button type="button" class="btn btn-sm" id="btn-bench-cancel">${escapeHtml(
-      t("bench.cancelRun")
-    )}</button>`;
+    <div class="bench-progress-top">
+      <span class="spinner"></span>
+      <span class="bench-progress-text">${escapeHtml(
+        t("bench.progressText", {
+          runs: job.planned_runs,
+          model: job.cross_model
+            ? tn(job.models.length, "bench.oneModel", "bench.nModels")
+            : job.model,
+        })
+      )}</span>
+      <span class="bench-progress-meta">${escapeHtml(
+        t("bench.progressMeta", {
+          time: job.started_at,
+          seconds: Math.round(job.elapsed_seconds),
+        })
+      )}</span>
+      <button type="button" class="btn btn-sm" id="btn-bench-cancel">${escapeHtml(
+        t("bench.cancelRun")
+      )}</button>
+    </div>
+    ${bar}
+    ${stepLine}`;
 
   const cancelBtn = document.getElementById("btn-bench-cancel");
 
@@ -638,7 +1044,7 @@ function renderProgress(job) {
     const restore = setButtonBusy(cancelBtn);
 
     try {
-      await postJson("/api/benchmark/cancel", {});
+      await postJson(activeEndpoints.cancel, {});
       // The next poll settles the job into its cancelled state.
       toast("pending", t("bench.cancelRun"), t("bench.cancelledBody"));
     } catch (error) {
@@ -652,12 +1058,12 @@ function renderProgress(job) {
 /**
  * Lock or unlock every control that would change the setup mid-run.
  *
- * @param {boolean} running Whether a comparison is in flight.
+ * @param {boolean} running Whether a benchmark is in flight.
  */
 function setRunning(running) {
   isRunning = running;
 
-  [modelEl, promptsEl, includeOutputEl, addBtn, importBtn].forEach((el) => {
+  [promptsEl, includeOutputEl, repetitionsEl, addBtn, importBtn].forEach((el) => {
     el.disabled = running;
   });
 
@@ -667,6 +1073,37 @@ function setRunning(running) {
   }
 
   renderSetup();
+}
+
+/**
+ * Download the finished job's result through one of the results endpoints.
+ *
+ * @param {string} format "csv" or "json".
+ * @param {object} job The finished job snapshot.
+ */
+async function downloadResult(format, job) {
+  const response = await fetch(
+    format === "csv" ? "/api/benchmark/results-csv" : "/api/benchmark/results-json",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: job.id, result: job.result }),
+    }
+  );
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.error || `Request failed (${response.status})`);
+  }
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = `benchmark-${job.id}.${format}`;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 /**
@@ -684,6 +1121,9 @@ function applyJob(job) {
 
   if (job.status === "running") {
     setRunning(true);
+    // The results area is the progress area while a run is in flight; the
+    // finished results replace it the moment it settles.
+    resultsEl.innerHTML = "";
     renderProgress(job);
     metaEl.textContent = t("bench.runningSince", { time: job.started_at });
     return;
@@ -710,12 +1150,12 @@ function applyJob(job) {
   renderResults(resultsEl, job);
   metaEl.textContent = t("bench.finishedAt", { time: job.finished_at || "" });
 
-  const discard = document.getElementById("btn-bench-discard");
+  const discard = resultsEl.querySelector("[data-results-discard]");
 
   if (discard) {
     discard.addEventListener("click", async () => {
       try {
-        await postJson("/api/benchmark/clear", {});
+        await postJson(activeEndpoints.clear, {});
       } catch (error) {
         toast("error", t("bench.cannotDiscard"), error.message);
         return;
@@ -725,9 +1165,23 @@ function applyJob(job) {
       metaEl.textContent = "";
     });
   }
+
+  resultsEl.querySelectorAll("[data-results-download]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const restore = setButtonBusy(button);
+
+      try {
+        await downloadResult(button.dataset.resultsDownload, job);
+      } catch (error) {
+        toast("error", t("bench.exportFailed"), error.message);
+      } finally {
+        restore();
+      }
+    });
+  });
 }
 
-/** Poll the job endpoint until the run settles. */
+/** Poll whichever status endpoint the running job belongs to. */
 function startPolling() {
   window.clearInterval(pollTimer);
 
@@ -735,7 +1189,7 @@ function startPolling() {
     let job;
 
     try {
-      job = (await api("/api/benchmark/status")).data;
+      job = (await api(activeEndpoints.status)).data;
     } catch (error) {
       // A failed poll says nothing about the run itself, so keep polling and let
       // the alert explain the gap.
@@ -765,23 +1219,75 @@ function startPolling() {
   }, POLL_INTERVAL_MS);
 }
 
+/**
+ * Build the request body for the plan the inputs describe, and name the
+ * endpoint set it belongs to.
+ *
+ * @param {object} plan The plan from readPlan.
+ * @returns {{endpoints: object, payload: object}} Where to post and what.
+ */
+function buildRequest(plan) {
+  const prompts = readPrompts();
+  const configurations = toPayload();
+  const shared = {
+    prompts,
+    include_output: includeOutputEl.checked,
+    repetitions: readRepetitions(),
+  };
+
+  if (plan.models === 1) {
+    // One model: the configuration comparison serves both the plain speed
+    // measurement (an empty list means the model's own defaults, which the
+    // server synthesizes into a "defaults" entry) and the configuration
+    // comparison.
+    return {
+      endpoints: SINGLE,
+      payload: {
+        ...shared,
+        model: selectedModels[0],
+        configurations,
+      },
+    };
+  }
+
+  // Several models: the model comparison, with per-model overrides only when
+  // the plan is a tournament.
+  const modelConfigs = {};
+
+  if (plan.kind === "tournament") {
+    const stored = getConfigurations();
+
+    selectedModels.forEach((model, index) => {
+      const fallback = stored[index % stored.length];
+      const chosenId = pairing.get(model) ?? fallback.id;
+      const chosen = stored.find((config) => config.id === chosenId) || fallback;
+
+      modelConfigs[model] = chosen.options;
+    });
+  }
+
+  return {
+    endpoints: MULTI,
+    payload: {
+      ...shared,
+      models: selectedModels,
+      config: configurations.length === 1 ? configurations[0].options : {},
+      model_configs: modelConfigs,
+    },
+  };
+}
+
 function bindRun() {
   runBtn.addEventListener("click", async () => {
-    const prompts = readPrompts();
+    const plan = readPlan();
+    const { endpoints, payload } = buildRequest(plan);
     const restore = setButtonBusy(runBtn);
 
     try {
-      const { data } = await postJson("/api/benchmark/run", {
-        model: modelEl.value,
-        prompts,
-        include_output: includeOutputEl.checked,
-        configurations: toPayload(),
-      });
+      const { data } = await postJson(endpoints.run, payload);
 
+      activeEndpoints = endpoints;
       hideAlert(errorEl);
-      resultsEl.innerHTML = `<div class="empty-state">${escapeHtml(
-        t("bench.runningPlaceholder")
-      )}</div>`;
       applyJob(data);
       startPolling();
 
@@ -803,12 +1309,14 @@ function bindRun() {
 /**
  * Refresh the parts of the tab that depend on other tabs' data.
  *
- * The model dropdown is filled by the Models panel and the server status card
+ * The model list is filled by the Models panel and the server status card
  * comes from the Ollama panel, so this is called after either of those loads.
- * Repopulating the dropdown re-enables it, which would unlock the setup while a
- * comparison is still running, so the lock is reapplied here.
  */
 export function refreshBenchmarkPanel() {
+  // A model that was ticked and has since been removed cannot be benchmarked.
+  const installed = getInstalledModels();
+  selectedModels = selectedModels.filter((model) => installed.includes(model));
+
   setRunning(isRunning);
 }
 
@@ -818,13 +1326,26 @@ export async function initBenchmarkPanel() {
   bindConfigList();
   bindImport();
   bindRun();
+  initCollapsibleCards();
 
   promptsEl.addEventListener("input", () => {
-    renderCards();
+    const count = readPrompts().length;
+
+    promptCountEl.textContent =
+      count === 0
+        ? t("bench.noPromptsYet")
+        : tn(count, "bench.promptReady", "bench.promptsReady");
+
+    renderPlan();
+    renderStats();
     updateRunState();
   });
 
-  modelEl.addEventListener("change", updateRunState);
+  repetitionsEl.addEventListener("input", () => {
+    renderPlan();
+    updateRunState();
+  });
+
   exportBtn.addEventListener("click", exportSetup);
 
   renderSetup();
@@ -836,14 +1357,38 @@ export async function initBenchmarkPanel() {
     showAlert(errorEl, t("bench.optionsFailed", { error: error.message }));
   }
 
-  // A reload during a run must not lose it: the job lives on the server, so pick
-  // whatever is there back up.
+  // A reload during a run must not lose it, and either service may be the one
+  // holding it, so both are asked.
   try {
-    const { data } = await api("/api/benchmark/status");
-    applyJob(data);
+    const [single, multi] = await Promise.all([
+      api(SINGLE.status),
+      api(MULTI.status),
+    ]);
 
-    if (data && data.status === "running") {
+    const running =
+      single.data && single.data.status === "running"
+        ? { job: single.data, endpoints: SINGLE }
+        : multi.data && multi.data.status === "running"
+          ? { job: multi.data, endpoints: MULTI }
+          : null;
+
+    if (running) {
+      activeEndpoints = running.endpoints;
+      applyJob(running.job);
       startPolling();
+      return;
+    }
+
+    // Nothing running: show whichever finished job is the more recent one.
+    const finished = [single.data, multi.data].filter(Boolean);
+
+    if (finished.length > 0) {
+      const latest = finished.reduce((newest, job) =>
+        (job.finished_at || "") > (newest.finished_at || "") ? job : newest
+      );
+
+      activeEndpoints = latest.cross_model ? MULTI : SINGLE;
+      applyJob(latest);
     }
   } catch (error) {
     showAlert(errorEl, t("bench.statusFailed", { error: error.message }));

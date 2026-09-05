@@ -1,4 +1,4 @@
-"""API routes for the Benchmark tab, backed by ``MSHCore.ollama.experiment``.
+"""API routes for the Benchmark tab, backed by ``MSHCore.benchmark.ollama_runner``.
 
 ``compare_tests`` is the only core function this tab drives. It blocks for as
 long as every configuration takes to answer every prompt, so it runs in a
@@ -10,18 +10,27 @@ background job and the browser polls:
     GET  /api/benchmark/status     poll the running or finished job
     POST /api/benchmark/clear      discard a finished job
     POST /api/benchmark/export     download a run as a reusable config file
+    POST /api/benchmark/apply      create a model copy with the winner's options
 """
 
-from flask import Blueprint, jsonify, request
+import csv
+import io
+import json
+
+from flask import Blueprint, Response, jsonify, request
+
+from MSHCore.ollama import model as ollama_model
 
 from ..parsing import (
     OPTION_SCHEMA,
     ConfigError,
     normalize_configurations,
+    normalize_options,
     normalize_prompts,
+    normalize_repetitions,
     parse_document,
 )
-from ..responses import body, fail, ok
+from ..responses import body, call_core, fail, ok
 from ..services import benchmark
 
 blueprint = Blueprint("benchmark", __name__, url_prefix="/api/benchmark")
@@ -79,7 +88,11 @@ def api_benchmark_parse():
 
 @blueprint.route("/run", methods=["POST"])
 def api_benchmark_run():
-    """Start a comparison across every supplied configuration."""
+    """Start a comparison across every supplied configuration.
+
+    An empty configuration list is the plain speed test: the model runs once
+    under its own defaults, and the row in the results is named for that.
+    """
     payload = body()
     model = (payload.get("model") or "").strip()
 
@@ -88,7 +101,12 @@ def api_benchmark_run():
 
     try:
         prompts = normalize_prompts(payload.get("prompts"))
-        configurations = normalize_configurations(payload.get("configurations"))
+        configurations = (
+            normalize_configurations(payload.get("configurations"))
+            if payload.get("configurations")
+            else [{"name": "defaults", "options": {}}]
+        )
+        repetitions = normalize_repetitions(payload.get("repetitions"))
     except ConfigError as error:
         return fail(str(error), 400)
 
@@ -98,6 +116,7 @@ def api_benchmark_run():
             prompts=prompts,
             configurations=configurations,
             include_output=bool(payload.get("include_output")),
+            repetitions=repetitions,
         )
     except RuntimeError as error:
         # 409: the request is well-formed, the server is just already busy.
@@ -138,6 +157,133 @@ def api_benchmark_clear():
     return ok(None)
 
 
+@blueprint.route("/apply", methods=["POST"])
+def api_benchmark_apply():
+    """Create a model copy carrying the winning configuration.
+
+    The source model is never modified: Core's ``configure_model`` writes a
+    new model whose Modelfile carries the winning options, so the result of a
+    benchmark becomes a reusable thing on disk.
+    """
+    payload = body()
+    model = (payload.get("model") or "").strip()
+    target = (payload.get("target") or "").strip()
+
+    if not model:
+        return fail("A model name is required", 400)
+
+    if not target:
+        return fail("A name for the new model is required", 400)
+
+    try:
+        options = normalize_options(payload.get("options") or {})
+    except ConfigError as error:
+        return fail(str(error), 400)
+
+    if not options:
+        return fail(
+            "The winning configuration sets no options — the model already "
+            "runs this way, so there is nothing to apply.",
+            400,
+        )
+
+    return call_core(ollama_model.configure_model, model, target, options)
+
+
+def _download(response, filename):
+    """Attach the download headers the page saves files through.
+
+    Args:
+        response: The response body to offer for download.
+        filename: File name suggested to the browser.
+
+    Returns:
+        Response: The same response with Content-Disposition attached.
+    """
+    response.headers["Content-Disposition"] = (
+        f'attachment; filename="{filename}"'
+    )
+
+    return response
+
+
+@blueprint.route("/results-json", methods=["POST"])
+def api_benchmark_results_json():
+    """Download the finished run's result as one JSON document."""
+    payload = body()
+    result = payload.get("result")
+
+    if not isinstance(result, dict):
+        return fail("No benchmark result was supplied", 400)
+
+    return _download(
+        jsonify(result),
+        f"benchmark-{payload.get('id') or 'results'}.json",
+    )
+
+
+@blueprint.route("/results-csv", methods=["POST"])
+def api_benchmark_results_csv():
+    """Download the finished run's summary table as CSV.
+
+    One row per test: the metrics the results table shows, so the file drops
+    straight into a spreadsheet.
+    """
+    payload = body()
+    result = payload.get("result")
+
+    if not isinstance(result, dict):
+        return fail("No benchmark result was supplied", 400)
+
+    tests = result.get("tests")
+
+    if not isinstance(tests, list) or not tests:
+        return fail("No benchmark result was supplied", 400)
+
+    columns = [
+        ("average_output_tokens_per_second", "output tok/s"),
+        ("average_prompt_tokens_per_second", "prompt tok/s"),
+        ("average_duration_seconds", "seconds"),
+        ("average_ttft_seconds", "ttft s"),
+        ("output_tokens_per_second_stddev", "output noise"),
+        ("total_output_tokens", "output tokens"),
+        ("vram_used_mb", "vram MB"),
+        ("gpu_temperature_c", "gpu C"),
+    ]
+
+    # The per-test summary nests inside each test; flatten it into rows first.
+    rows = []
+
+    for test in tests:
+        summary = test.get("summary") or {}
+        row = {"configuration": test.get("name")}
+
+        for key, header in columns:
+            row[header] = summary.get(key)
+
+        results = test.get("results") or []
+        row["prompts"] = len(results)
+        row["failed"] = sum(
+            1 for entry in results if not entry.get("success")
+        )
+        rows.append(row)
+
+    output = io.StringIO()
+    writer = csv.DictWriter(
+        output,
+        fieldnames=["configuration"]
+        + [header for _, header in columns]
+        + ["prompts", "failed"],
+    )
+    writer.writeheader()
+    writer.writerows(rows)
+
+    return _download(
+        Response(output.getvalue(), mimetype="text/csv"),
+        f"benchmark-{payload.get('id') or 'results'}.csv",
+    )
+
+
 @blueprint.route("/export", methods=["POST"])
 def api_benchmark_export():
     """Return the current setup as a configuration file the page can re-upload."""
@@ -147,6 +293,7 @@ def api_benchmark_export():
     try:
         configurations = normalize_configurations(payload.get("configurations"))
         prompts = normalize_prompts(payload.get("prompts")) if payload.get("prompts") else []
+        repetitions = normalize_repetitions(payload.get("repetitions"))
     except ConfigError as error:
         return fail(str(error), 400)
 
@@ -154,6 +301,7 @@ def api_benchmark_export():
         "model": model or None,
         "prompts": prompts,
         "include_output": bool(payload.get("include_output")),
+        "repetitions": repetitions,
         "configurations": configurations,
     }
 
