@@ -9,6 +9,7 @@ import { applyDocumentLang, applyStaticStrings, getLang, setLang } from "./lib/i
 import { initNav } from "./lib/nav.js";
 import { initSidebar } from "./lib/sidebar.js";
 import { initBenchmarkPanel, refreshBenchmarkPanel } from "./panels/benchmark.js";
+import { initHistoryPanel } from "./panels/benchmark_history.js";
 import { initModelsPanel, loadModels } from "./panels/models.js";
 import { initOllamaPanel, loadOllamaStatus } from "./panels/ollama.js";
 import { initSystemPanel, loadSystem } from "./panels/system.js";
@@ -35,6 +36,7 @@ initSystemPanel();
 initOllamaPanel();
 initModelsPanel();
 initBenchmarkPanel();
+initHistoryPanel();
 
 // Any action that changes model state reloads the model tables. The benchmark
 // tab reads the same model list and server status, so it repaints with them.

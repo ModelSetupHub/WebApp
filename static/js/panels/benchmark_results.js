@@ -508,9 +508,12 @@ export function renderResults(el, job) {
             })
           )}</div>
         </div>
-        <button type="button" class="btn btn-sm" id="btn-bench-discard">${escapeHtml(
-          t("bench.discardResults")
-        )}</button>
+        <div class="btn-row">
+          ${job.history_id ? `<span class="chip">${escapeHtml(t("bench.savedToHistory"))}</span>` : ""}
+          <button type="button" class="btn btn-sm" id="btn-bench-discard">${escapeHtml(
+            t("bench.discardResults")
+          )}</button>
+        </div>
       </div>
 
       ${verdict(tests, significance)}

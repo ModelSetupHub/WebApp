@@ -32,6 +32,7 @@ def create_app() -> Flask:
     )
 
     from .routes.benchmark import blueprint as benchmark_blueprint
+    from .routes.history import blueprint as history_blueprint
     from .routes.models import blueprint as models_blueprint
     from .routes.pages import blueprint as pages_blueprint
     from .routes.runtime import blueprint as runtime_blueprint
@@ -42,5 +43,6 @@ def create_app() -> Flask:
     app.register_blueprint(runtime_blueprint)
     app.register_blueprint(models_blueprint)
     app.register_blueprint(benchmark_blueprint)
+    app.register_blueprint(history_blueprint)
 
     return app

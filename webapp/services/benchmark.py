@@ -8,6 +8,11 @@ open.
 Only one comparison is kept at a time. Two running at once would contend for the
 same GPU and make every timing in both meaningless, so a second request is
 refused rather than queued.
+
+A comparison that finishes successfully is saved into the toolkit's benchmark
+history (see ``MSHCore.benchmark.history``), so reloads and restarts do not
+erase what a run measured. Saving is best-effort: a history failure is logged
+and dropped, since the live result is what the page is showing anyway.
 """
 
 from datetime import datetime
@@ -15,8 +20,10 @@ import threading
 import time
 import uuid
 
+from MSHCore.benchmark import history as benchmark_history
 from MSHCore.cancellation import CancellationToken, OperationCancelled
 from MSHCore.benchmark import ollama_runner
+from MSHCore.logging import write_log
 
 _lock = threading.Lock()
 _job: dict | None = None
@@ -51,6 +58,7 @@ def _snapshot(job: dict) -> dict:
         "repetitions": job["repetitions"],
         "planned_runs": job["planned_runs"],
         "progress": job.get("progress"),
+        "history_id": job.get("history_id"),
         "elapsed_seconds": elapsed,
         "started_at": job["started_at"],
         "finished_at": job["finished_at"],
@@ -141,6 +149,25 @@ def _work(job: dict) -> None:
                 "percent": 100.0,
                 "steps_done": job["progress"]["steps_total"],
             }
+
+    if outcome["status"] == "done":
+        # Outside the lock: the store touches the filesystem, and the job is
+        # already visible as finished to any poller.
+        saved_id = None
+
+        try:
+            saved_id = benchmark_history.save(outcome["result"])
+        except Exception as error:
+            write_log(
+                level="WARNING",
+                component="webapp/benchmark",
+                action="history_save",
+                message="Saving the finished comparison to history failed",
+                details={"error": str(error)},
+            )
+
+        with _lock:
+            job["history_id"] = saved_id
 
 
 def start(

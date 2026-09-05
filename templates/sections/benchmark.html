@@ -196,4 +196,13 @@
       <div class="empty-state" data-i18n="bench.noRunYet">No comparison has been run yet.</div>
     </div>
   </div>
+
+  {# ---------- History ---------- #}
+  {# Finished comparisons are auto-saved by the service; this collapsible
+     section keeps them out of the way until the user asks for them. #}
+  <div class="subsection">
+    <h2 class="subsection-title" data-i18n="bench.historyTitle">History</h2>
+
+    <div id="bench-history" aria-live="polite"></div>
+  </div>
 </section>

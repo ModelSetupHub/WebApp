@@ -767,6 +767,36 @@ export const STRINGS = {
   "bench.significanceReal": { en: "Real difference", fa: "تفاوت واقعی" },
   "bench.significanceNoise": { en: "Within noise", fa: "در حد نویز" },
   "bench.significanceUnknown": { en: "Unmeasured", fa: "اندازه‌گیری‌نشده" },
+
+  // ---------- Benchmark: history ----------
+  "bench.historyTitle": { en: "History", fa: "تاریخچه" },
+  "bench.historyRun": { en: "1 saved run", fa: "۱ اجرای ذخیره‌شده" },
+  "bench.historyRuns": { en: "{n} saved runs", fa: "{n} اجرای ذخیره‌شده" },
+  "bench.historyEmptyShort": { en: "empty", fa: "خالی" },
+  "bench.historyEmpty": {
+    en: "Finished comparisons are saved here automatically.",
+    fa: "مقایسه‌های تمام‌شده به‌صورت خودکار اینجا ذخیره می‌شوند.",
+  },
+  "bench.historyColSaved": { en: "saved", fa: "زمان ذخیره" },
+  "bench.historyColModel": { en: "model(s)", fa: "مدل‌ها" },
+  "bench.historyColConfigs": { en: "configs", fa: "تنظیم‌ها" },
+  "bench.historyColPrompts": { en: "prompts", fa: "پرامپت‌ها" },
+  "bench.historyColWinner": { en: "winner", fa: "برنده" },
+  "bench.historyColNoise": { en: "noise verdict", fa: "حکم نویز" },
+  "bench.historyDetails": { en: "Details", fa: "جزئیات" },
+  "bench.historyNoAverages": { en: "no measured rates", fa: "سرعت قابل‌اندازه‌گیری ثبت نشده" },
+  "bench.historyDelete": { en: "Delete", fa: "حذف" },
+  "bench.historyDeleteConfirm": {
+    en: "Delete this saved comparison from the history? This cannot be undone.",
+    fa: "این مقایسه‌ی ذخیره‌شده از تاریخچه حذف شود؟ این کار قابل بازگشت نیست.",
+  },
+  "bench.historyDeleteDone": { en: "Deleted", fa: "حذف شد" },
+  "bench.historyDeleteFailed": { en: "Could not delete", fa: "حذف انجام نشد" },
+  "bench.historyLoadFailed": {
+    en: "Could not load the history — {error}",
+    fa: "بارگذاری تاریخچه ناموفق بود — {error}",
+  },
+  "bench.savedToHistory": { en: "saved to history", fa: "در تاریخچه ذخیره شد" },
   "bench.verdictWithinNoise": {
     en:
       "The gap to the next configuration is within measurement noise — either " +
