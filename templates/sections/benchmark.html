@@ -1,12 +1,13 @@
-{# Benchmark tab: build a set of configurations, then compare them with
-   MSHCore.benchmark.ollama_runner.compare_tests. #}
+{# Benchmark tab: one set of inputs — prompts, models, configurations — from
+   which the test kind follows. The plan panel names that kind and the run
+   button dispatches to whichever comparison it implies. #}
 <section id="benchmark" class="panel-section" aria-labelledby="benchmark-title">
   <header class="section-head">
     <div class="section-heading">
       <h1 id="benchmark-title" data-i18n="bench.title">Benchmark</h1>
       <p class="section-note" data-i18n="bench.note">
-        Run the same prompts through one model under several configurations and
-        compare what each one costs.
+        Measure how fast models answer on this machine — one model, several
+        configurations, several models, or every pairing at once.
       </p>
     </div>
 
@@ -22,26 +23,19 @@
 
   <div class="card-grid" id="bench-cards"></div>
 
-  {# ---------- Step 1: what to test ---------- #}
+  {# ---------- 1 · Prompts ---------- #}
   <div class="subsection">
-    <h2 class="subsection-title" data-i18n="bench.step1">1 · Target</h2>
-    <p class="hint">compare_tests(model, prompts, …)</p>
+    <h2 class="subsection-title" data-i18n="bench.step1">1 · Prompts</h2>
 
     <div class="bench-target">
-      <label class="field">
-        <span class="field-label" data-i18n="models.fieldModel">Model</span>
-        <select class="input is-ltr" id="bench-model" dir="ltr" data-model-select required></select>
-        <span class="field-hint" data-i18n="bench.modelHint">
-          Every configuration is tested against this one model.
-        </span>
-      </label>
-
       <label class="field">
         <span class="field-label" data-i18n="bench.prompts">Prompts</span>
         <textarea class="input" id="bench-prompts" rows="7"
                   data-i18n-placeholder="bench.promptsPlaceholder"></textarea>
         <span class="field-hint" data-i18n="bench.promptsHint">
-          Separate prompts with a blank line.
+          Separate prompts with a blank line. Every model and configuration
+          answers all of them, and the model is preloaded before each so load
+          time never lands in the timings.
         </span>
       </label>
 
@@ -57,9 +51,28 @@
     </div>
   </div>
 
-  {# ---------- Step 2: the configurations ---------- #}
+  {# ---------- 2 · Models ---------- #}
   <div class="subsection">
-    <h2 class="subsection-title" data-i18n="bench.step2">2 · Configurations</h2>
+    <h2 class="subsection-title" data-i18n="bench.step2">2 · Models</h2>
+
+    <div class="bench-toolbar">
+      <div class="bench-toolbar-text">
+        <span class="bench-toolbar-title" id="bench-model-count" data-i18n="bench.noModelsYet">
+          No model selected
+        </span>
+        <span class="bench-toolbar-note" data-i18n="bench.modelsToolbarNote">
+          One model measures that model. Two or more compare them against each
+          other, one at a time so they never share the GPU.
+        </span>
+      </div>
+    </div>
+
+    <div class="bench-models-list" id="bench-models-list"></div>
+  </div>
+
+  {# ---------- 3 · Configurations ---------- #}
+  <div class="subsection">
+    <h2 class="subsection-title" data-i18n="bench.step3">3 · Configurations</h2>
 
     <div class="bench-toolbar">
       <div class="bench-toolbar-text">
@@ -67,7 +80,8 @@
           No configurations yet
         </span>
         <span class="bench-toolbar-note" data-i18n="bench.toolbarNote">
-          Add them by hand, or upload a configuration file.
+          Optional: with none, every model runs under its own defaults. Add them
+          by hand, or upload a configuration file.
         </span>
       </div>
 
@@ -158,94 +172,28 @@
     </form>
 
     <div class="bench-config-grid" id="bench-config-list"></div>
-  </div>
 
-  {# ---------- Or compare models instead ---------- #}
-  {# The cross-model drawer keeps the model comparison out of the main flow:
-     the same prompts and one shared configuration run against every selected
-     model. Collapsed until asked for. #}
-  <div class="subsection">
-    <div class="bench-toolbar">
-      <div class="bench-toolbar-text">
-        <span class="bench-toolbar-title" data-i18n="bench.modelsTitle">
-          Or compare models instead
+    {# Pairing table: only for the tournament, where each model runs under its
+       own configuration rather than a shared one. #}
+    <div class="bench-pairing is-hidden" id="bench-pairing">
+      <div class="bench-pairing-head">
+        <span class="bench-pairing-title" data-i18n="bench.pairingTitle">
+          Configuration per model
         </span>
-        <span class="bench-toolbar-note" data-i18n="bench.modelsNote">
-          Same prompts, one shared configuration, several models — find out
-          which one suits this machine.
+        <span class="bench-pairing-note" data-i18n="bench.pairingNote">
+          Several models and several configurations: give each model the one it
+          races under.
         </span>
       </div>
-      <div class="bench-toolbar-actions">
-        <button type="button" class="btn" id="btn-models-toggle" data-i18n="bench.modelsOpen">
-          Open model comparison
-        </button>
-      </div>
+      <div class="bench-pairing-rows" id="bench-pairing-rows"></div>
     </div>
-
-    <form class="bench-drawer is-hidden" id="bench-models-drawer" novalidate
-          aria-labelledby="bench-models-title">
-      <div class="bench-drawer-head">
-        <h3 class="bench-drawer-title" id="bench-models-title" data-i18n="bench.modelsDrawerTitle">
-          Model comparison
-        </h3>
-        <button type="button" class="btn btn-sm" id="btn-models-close" data-i18n="btn.close">Close</button>
-      </div>
-
-      <div class="field">
-        <span class="field-label" data-i18n="bench.modelsPick">Models to compare</span>
-        <div class="bench-models-list" id="bench-models-list"></div>
-        <span class="field-hint" data-i18n="bench.modelsPickHint">
-          Two to six installed models, measured in the order chosen.
-        </span>
-      </div>
-
-      <label class="field">
-        <span class="field-label" data-i18n="bench.modelsPrompts">Prompts</span>
-        <textarea class="input" id="bench-mc-prompts" rows="5"
-                  data-i18n-placeholder="bench.promptsPlaceholder"></textarea>
-        <span class="field-hint" data-i18n="bench.promptsHint">
-          Separate prompts with a blank line.
-        </span>
-      </label>
-
-      <label class="field">
-        <span class="field-label" data-i18n="bench.repetitions">Repetitions</span>
-        <input class="input is-ltr" id="bench-mc-repetitions" type="number" dir="ltr"
-               min="1" max="10" step="1" value="1" inputmode="numeric">
-        <span class="field-hint" data-i18n="bench.modelsRepetitionsHint">
-          Each prompt runs this many times against every model.
-        </span>
-      </label>
-
-      <label class="field">
-        <span class="field-label" data-i18n="bench.modelsConfig">Shared configuration</span>
-        <textarea class="input is-ltr" id="bench-models-config" rows="4" dir="ltr" spellcheck="false"
-          placeholder='{ "temperature": 0.7, "num_predict": 128 }'></textarea>
-        <span class="field-hint" data-i18n="bench.modelsConfigHint">
-          One JSON object of Ollama options, applied to every model. Empty
-          means every model keeps its defaults.
-        </span>
-      </label>
-
-      <div class="bench-editor-foot">
-        <span class="bench-models-status" id="bench-models-status" aria-live="polite"></span>
-        <button type="button" class="btn btn-primary" id="btn-models-run" data-i18n="bench.modelsRun" disabled>
-          Run model comparison
-        </button>
-      </div>
-
-      <div class="alert is-hidden" id="bench-mc-error" role="alert"></div>
-      <div class="bench-progress is-hidden" id="bench-models-progress" aria-live="polite"></div>
-
-      <div id="bench-mc-results">
-        <div class="empty-state" data-i18n="bench.noRunYet">No comparison has been run yet.</div>
-      </div>
-    </form>
   </div>
 
-  {# ---------- Step 3: run it ---------- #}
+  {# ---------- 4 · Plan and run ---------- #}
   <div class="subsection">
-    <h2 class="subsection-title" data-i18n="bench.step3">3 · Run</h2>
+    <h2 class="subsection-title" data-i18n="bench.step4">4 · Run</h2>
+
+    <div class="bench-plan" id="bench-plan" aria-live="polite"></div>
 
     <div class="control-bar">
       <div class="control-text">
@@ -253,7 +201,7 @@
           Nothing to run yet
         </span>
         <span class="control-note" id="bench-run-note" data-i18n="bench.nothingToRunNote">
-          Choose a model, write at least one prompt, and add a configuration.
+          Write at least one prompt and pick at least one model.
         </span>
       </div>
 
@@ -263,7 +211,7 @@
           <span class="bench-switch-label" data-i18n="bench.keepOutput">Keep generated text</span>
         </label>
         <button type="button" class="btn btn-primary" id="btn-bench-run" data-i18n="bench.runComparison" disabled>
-          Run comparison
+          Run benchmark
         </button>
       </div>
     </div>
@@ -276,13 +224,13 @@
     <h2 class="subsection-title" data-i18n="bench.resultsTitle">Results</h2>
 
     <div id="bench-results">
-      <div class="empty-state" data-i18n="bench.noRunYet">No comparison has been run yet.</div>
+      <div class="empty-state" data-i18n="bench.noRunYet">No benchmark has been run yet.</div>
     </div>
   </div>
 
   {# ---------- History ---------- #}
-  {# Finished comparisons are auto-saved by the service; this collapsible
-     section keeps them out of the way until the user asks for them. #}
+  {# Finished runs are auto-saved by the service; this collapsible section keeps
+     them out of the way until the user asks for them. #}
   <div class="subsection">
     <h2 class="subsection-title" data-i18n="bench.historyTitle">History</h2>
 

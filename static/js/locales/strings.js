@@ -392,7 +392,7 @@ export const STRINGS = {
   },
   "bench.exportSetup": { en: "Export setup", fa: "دریافت فایل تنظیمات" },
 
-  "bench.step1": { en: "1 · Target", fa: "1 · هدف" },
+  "bench.step1": { en: "1 · Prompts", fa: "1 · پرامپت‌ها" },
   "bench.modelHint": {
     en:
       "Every configuration is tested against this one model, so differences in " +
@@ -421,7 +421,27 @@ export const STRINGS = {
       "اندازه‌گیری‌ها نیاید.",
   },
 
-  "bench.step2": { en: "2 · Configurations", fa: "2 · تنظیم‌ها" },
+  "bench.step2": { en: "2 · Models", fa: "2 · مدل‌ها" },
+  "bench.noModelsYet": { en: "No model selected", fa: "مدلی انتخاب نشده" },
+  "bench.modelReady": { en: "1 model selected", fa: "۱ مدل انتخاب شده" },
+  "bench.modelsReadyCount": { en: "{n} models selected", fa: "{n} مدل انتخاب شده" },
+  "bench.modelsToolbarNote": {
+    en:
+      "One model measures that model. Two or more compare them against each " +
+      "other, one at a time so they never share the GPU.",
+    fa:
+      "یک مدل، همان مدل را می‌سنجد. دو مدل یا بیشتر با هم مقایسه می‌شوند و " +
+      "یکی‌یکی اجرا می‌شوند تا GPU را با هم شریک نشوند.",
+  },
+  "bench.modelsTooMany": { en: "Too many models", fa: "تعداد مدل زیاد است" },
+  "bench.modelsTooManyBody": {
+    en: "At most {n} models can be compared in one run.",
+    fa: "در هر اجرا حداکثر {n} مدل قابل مقایسه است.",
+  },
+  "bench.oneModel": { en: "1 model", fa: "۱ مدل" },
+  "bench.nModels": { en: "{n} models", fa: "{n} مدل" },
+
+  "bench.step3": { en: "3 · Configurations", fa: "3 · تنظیم‌ها" },
   "bench.noConfigsYet": { en: "No configurations yet", fa: "هنوز تنظیمی اضافه نشده" },
   "bench.configReady": { en: "1 configuration ready", fa: "1 تنظیم آماده است" },
   "bench.configsReady": { en: "{n} configurations ready", fa: "{n} تنظیم آماده است" },
@@ -517,14 +537,67 @@ export const STRINGS = {
   "bench.configSaved": { en: "Configuration saved", fa: "تنظیم ذخیره شد" },
   "bench.configDuplicated": { en: "Configuration duplicated", fa: "تنظیم تکثیر شد" },
 
-  "bench.step3": { en: "3 · Run", fa: "3 · اجرا" },
+  "bench.step4": { en: "4 · Run", fa: "4 · اجرا" },
   "bench.keepOutput": { en: "Keep generated text", fa: "نگه‌داشتن متن تولیدشده" },
-  "bench.runComparison": { en: "Run comparison", fa: "اجرای مقایسه" },
+  "bench.runComparison": { en: "Run benchmark", fa: "اجرای بنچمارک" },
   "bench.nothingToRun": { en: "Nothing to run yet", fa: "هنوز چیزی برای اجرا نیست" },
   "bench.nothingToRunNote": {
-    en: "Choose a model, write at least one prompt, and add a configuration.",
-    fa: "یک مدل انتخاب کنید، دست‌کم یک پرامپت بنویسید، و یک تنظیم اضافه کنید.",
+    en: "Write at least one prompt and pick at least one model.",
+    fa: "دست‌کم یک پرامپت بنویسید و دست‌کم یک مدل انتخاب کنید.",
   },
+
+  // ---------- Benchmark: the plan panel ----------
+  // The four kinds a run can be, named from the counts rather than chosen.
+  "bench.planNoneLabel": { en: "No test described yet", fa: "هنوز تستی مشخص نشده" },
+  "bench.planNoneNote": {
+    en: "Pick a model to see what kind of test the inputs describe.",
+    fa: "یک مدل انتخاب کنید تا نوع تست مشخص شود.",
+  },
+  "bench.plan.single": { en: "Model speed test", fa: "سنجش سرعت مدل" },
+  "bench.planNote.single": {
+    en:
+      "One model over {prompts} prompt(s) — {runs} generation(s) in total. Its " +
+      "speed, latency and memory as measured on this machine.",
+    fa:
+      "یک مدل روی {prompts} پرامپت — مجموعاً {runs} تولید. سرعت، تأخیر و " +
+      "حافظه‌ی آن، اندازه‌گیری‌شده روی همین سیستم.",
+  },
+  "bench.plan.configs": { en: "Configuration test", fa: "سنجش تنظیم‌ها" },
+  "bench.planNote.configs": {
+    en:
+      "{configs} configurations on one model — {runs} generation(s) in total. " +
+      "Which settings are actually faster for this model.",
+    fa:
+      "{configs} تنظیم روی یک مدل — مجموعاً {runs} تولید. اینکه کدام تنظیم " +
+      "واقعاً برای این مدل سریع‌تر است.",
+  },
+  "bench.plan.models": { en: "Model comparison", fa: "مقایسه‌ی مدل‌ها" },
+  "bench.planNote.models": {
+    en:
+      "{models} models under the same settings — {runs} generation(s) in " +
+      "total, each model measured alone so they never share the GPU.",
+    fa:
+      "{models} مدل با تنظیم یکسان — مجموعاً {runs} تولید؛ هر مدل جدا " +
+      "اندازه‌گیری می‌شود تا GPU را با هم شریک نشوند.",
+  },
+  "bench.plan.tournament": { en: "Tournament", fa: "مسابقه" },
+  "bench.planNote.tournament": {
+    en:
+      "{models} models, each under the configuration paired with it — {runs} " +
+      "generation(s) in total. The full head-to-head.",
+    fa:
+      "{models} مدل، هر کدام با تنظیمِ خودش — مجموعاً {runs} تولید. " +
+      "رقابت کامل رو‌در‌رو.",
+  },
+  "bench.pairingTitle": { en: "Configuration per model", fa: "تنظیم هر مدل" },
+  "bench.pairingNote": {
+    en:
+      "Several models and several configurations: give each model the one it " +
+      "races under.",
+    fa:
+      "چند مدل و چند تنظیم: به هر مدل تنظیمی بدهید که با آن مسابقه می‌دهد.",
+  },
+  "bench.defaultConfigName": { en: "defaults", fa: "پیش‌فرض" },
   "bench.inProgress": { en: "Comparison in progress", fa: "مقایسه در حال اجراست" },
   "bench.inProgressNote": {
     en: "The setup is locked until this run finishes.",
@@ -548,24 +621,29 @@ export const STRINGS = {
   "bench.ready": { en: "Ready to run", fa: "آماده اجراست" },
   "bench.readyNote": {
     en:
-      "{n} generation(s) against {model}. Each one is timed separately, with " +
-      "model load time excluded.",
+      "{n} generation(s). Each one is timed separately, with model load time " +
+      "excluded.",
     fa:
-      "{n} بار تولید روی {model}. هر کدام جدا زمان‌سنجی می‌شود و زمان بارگذاری " +
-      "مدل در آن حساب نمی‌شود.",
+      "{n} بار تولید. هر کدام جدا زمان‌سنجی می‌شود و زمان بارگذاری مدل در آن " +
+      "حساب نمی‌شود.",
   },
   "bench.listSeparator": { en: ", ", fa: "، " },
 
   // ---------- Benchmark: cards, progress, results ----------
+  "bench.cardModels": { en: "Models", fa: "مدل‌ها" },
+  "bench.cardModelsSub": {
+    en: "measured one at a time",
+    fa: "یکی‌یکی اندازه‌گیری می‌شوند",
+  },
   "bench.cardConfigs": { en: "Configurations", fa: "تنظیم‌ها" },
   "bench.cardConfigsSub": {
-    en: "compared against one model",
-    fa: "مقایسه‌شده روی یک مدل",
+    en: "none means model defaults",
+    fa: "خالی یعنی پیش‌فرض مدل",
   },
   "bench.cardPrompts": { en: "Prompts", fa: "پرامپت‌ها" },
   "bench.cardPromptsSub": {
-    en: "run against every configuration",
-    fa: "اجرا روی هر تنظیم",
+    en: "answered by every run",
+    fa: "در هر اجرا پاسخ داده می‌شوند",
   },
   "bench.cardTotalRuns": { en: "Total runs", fa: "کل اجراها" },
   "bench.cardTotalRunsSub": {
@@ -583,9 +661,8 @@ export const STRINGS = {
   "bench.finishedAt": { en: "Finished {time}", fa: "پایان‌یافته در {time}" },
   "bench.failedAt": { en: "Failed at {time}", fa: "ناموفق در {time}" },
   "bench.progressText": {
-    en:
-      "Running {runs} generation(s) across {configs} configuration(s) on {model}.",
-    fa: "اجرای {runs} تولید با {configs} تنظیم روی {model}.",
+    en: "Running {runs} generation(s) on {model}.",
+    fa: "اجرای {runs} تولید روی {model}.",
   },
   "bench.progressMeta": {
     en: "started {time} · {seconds}s elapsed",
@@ -601,6 +678,11 @@ export const STRINGS = {
       "{r} of {rn}",
     fa:
       "تنظیم {name} ({i} از {n}) · پرامپت {p} از {pn} · تکرار {r} از {rn}",
+  },
+  "bench.progressStepModel": {
+    en:
+      "Model {name} ({i} of {n}) · prompt {p} of {pn} · repetition {r} of {rn}",
+    fa: "مدل {name} ({i} از {n}) · پرامپت {p} از {pn} · تکرار {r} از {rn}",
   },
   "bench.runningPlaceholder": {
     en: "The comparison is running…",
@@ -798,67 +880,15 @@ export const STRINGS = {
   },
   "bench.savedToHistory": { en: "saved to history", fa: "در تاریخچه ذخیره شد" },
 
-  // ---------- Benchmark: model comparison ----------
+  // ---------- Benchmark: several models in one run ----------
   "bench.resultsHeadModels": {
     en: "{n} model(s) compared",
     fa: "{n} مدل مقایسه شد",
   },
-  "bench.modelsTitle": {
-    en: "Or compare models instead",
-    fa: "یا مدل‌ها را مقایسه کنید",
-  },
-  "bench.modelsNote": {
-    en:
-      "Same prompts, one shared configuration, several models — find out " +
-      "which one suits this machine.",
-    fa:
-      "همان پرامپت‌ها، یک تنظیم مشترک، چند مدل — ببینید کدام برای این سیستم " +
-      "مناسب‌تر است.",
-  },
-  "bench.modelsOpen": { en: "Open model comparison", fa: "باز کردن مقایسه‌ی مدل‌ها" },
-  "bench.modelsDrawerTitle": { en: "Model comparison", fa: "مقایسه‌ی مدل‌ها" },
-  "bench.modelsPick": { en: "Models to compare", fa: "مدل‌های مورد مقایسه" },
-  "bench.modelsPickHint": {
-    en: "Two to six installed models, measured in the order chosen.",
-    fa: "دو تا شش مدل نصب‌شده، به ترتیب انتخاب اندازه‌گیری می‌شوند.",
-  },
-  "bench.modelsPrompts": { en: "Prompts", fa: "پرامپت‌ها" },
-  "bench.modelsRepetitionsHint": {
-    en: "Each prompt runs this many times against every model.",
-    fa: "هر پرامپت این تعداد بار روی هر مدل اجرا می‌شود.",
-  },
-  "bench.modelsConfig": { en: "Shared configuration", fa: "تنظیم مشترک" },
-  "bench.modelsConfigHint": {
-    en:
-      "One JSON object of Ollama options, applied to every model. Empty " +
-      "means every model keeps its defaults.",
-    fa:
-      "یک آبجکت JSON از گزینه‌های Ollama که به همه‌ی مدل‌ها اعمال می‌شود. " +
-      "خالی یعنی هر مدل پیش‌فرض‌های خودش را دارد.",
-  },
-  "bench.modelsRun": { en: "Run model comparison", fa: "اجرای مقایسه‌ی مدل‌ها" },
   "bench.modelsNoneInstalled": {
     en: "No installed models found — pull one first.",
     fa: "مدلی یافت نشد — اول یک مدل بگیرید.",
   },
-  "bench.modelsMissing": { en: "fewer than two models are ticked", fa: "کمتر از دو مدل تیک خورده" },
-  "bench.modelsConfigInvalid": {
-    en: "the shared configuration is not valid JSON",
-    fa: "تنظیم مشترک JSON معتبر نیست",
-  },
-  "bench.modelsReady": {
-    en: "Ready: {n} generation(s) across {count} model(s).",
-    fa: "آماده: {n} بار تولید روی {count} مدل.",
-  },
-  "bench.modelsProgressText": {
-    en: "Running {runs} generation(s) across {models} model(s).",
-    fa: "اجرای {runs} تولید روی {models} مدل.",
-  },
-  "bench.modelsProgressStarting": {
-    en: "Preparing the run — loading the first model…",
-    fa: "آماده‌سازی اجرا — بارگذاری اولین مدل…",
-  },
-  "bench.modelsFinished": { en: "Model comparison finished", fa: "مقایسه‌ی مدل‌ها تمام شد" },
   "bench.verdictWithinNoise": {
     en:
       "The gap to the next configuration is within measurement noise — either " +

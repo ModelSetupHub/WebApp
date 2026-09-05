@@ -119,6 +119,7 @@ def _work(job: dict) -> None:
             models=job["models"],
             prompts=job["prompts"],
             config=job["config"],
+            model_configs=job["model_configs"] or None,
             include_output=job["include_output"],
             cancellation=job["token"],
             repetitions=job["repetitions"],
@@ -191,6 +192,7 @@ def start(
     models: list[str],
     prompts: list[str],
     config: dict | None = None,
+    model_configs: dict[str, dict] | None = None,
     include_output: bool = False,
     repetitions: int = 1,
 ) -> dict:
@@ -200,6 +202,9 @@ def start(
         models: Model names to compare, in run order.
         prompts: Prompt strings every model answers.
         config: Generation parameters shared by every model.
+        model_configs: Optional per-model overrides, keyed by model name. A
+            model named here runs under its own options; the rest keep the
+            shared configuration.
         include_output: Keep the generated text in the results.
         repetitions: How many times every prompt runs per model, from 1.
 
@@ -229,14 +234,23 @@ def start(
                 "starting another."
             )
 
+        overrides = dict(model_configs or {})
+
         _job = {
             "id": uuid.uuid4().hex[:12],
             "status": ACTIVE_STATUS,
             "models": models,
             "prompts": prompts,
             "config": dict(config or {}),
+            "model_configs": overrides,
+            # One entry per model, carrying the options that model actually
+            # runs under, so the results page can show them like any other
+            # configuration list.
             "configurations": [
-                {"name": model, "options": dict(config or {})}
+                {
+                    "name": model,
+                    "options": {**dict(config or {}), **(overrides.get(model) or {})},
+                }
                 for model in models
             ],
             "include_output": include_output,

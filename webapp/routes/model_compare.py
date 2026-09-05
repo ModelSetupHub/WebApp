@@ -57,11 +57,34 @@ def api_models_compare_run():
     except ConfigError as error:
         return fail(str(error), 400)
 
+    # Per-model overrides: the tournament mode sends one configuration per
+    # model, so each model races under its own settings.
+    raw_model_configs = payload.get("model_configs") or {}
+
+    if not isinstance(raw_model_configs, dict):
+        return fail("model_configs must be an object keyed by model name", 400)
+
+    model_configs = {}
+
+    try:
+        for name, entry in raw_model_configs.items():
+            if name not in models:
+                return fail(
+                    f"model_configs names '{name}', which is not among the "
+                    f"models being compared",
+                    400,
+                )
+
+            model_configs[name] = normalize_options(entry or {})
+    except ConfigError as error:
+        return fail(str(error), 400)
+
     try:
         job = model_compare.start(
             models=models,
             prompts=prompts,
             config=options,
+            model_configs=model_configs,
             include_output=bool(payload.get("include_output")),
             repetitions=repetitions,
         )
