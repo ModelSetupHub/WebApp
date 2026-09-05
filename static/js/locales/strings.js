@@ -21,6 +21,7 @@ export const STRINGS = {
   "nav.ollama": { en: "Ollama" },
   "nav.models": { en: "Models", fa: "مدل‌ها" },
   "nav.benchmark": { en: "Benchmark", fa: "بنچمارک" },
+  "nav.logs": { en: "Logs", fa: "لاگ‌ها" },
   "lang.switch": { en: "Language", fa: "زبان" },
   "sidebar.collapse": { en: "Collapse sidebar", fa: "جمع کردن منو" },
   "sidebar.expand": { en: "Expand sidebar", fa: "باز کردن منو" },

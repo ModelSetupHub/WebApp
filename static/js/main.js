@@ -10,6 +10,7 @@ import { initNav } from "./lib/nav.js";
 import { initSidebar } from "./lib/sidebar.js";
 import { initBenchmarkPanel, refreshBenchmarkPanel } from "./panels/benchmark.js";
 import { initHistoryPanel } from "./panels/benchmark_history.js";
+import { initLogsPanel } from "./panels/logs.js";
 import { initModelsPanel, loadModels } from "./panels/models.js";
 import { initOllamaPanel, loadOllamaStatus } from "./panels/ollama.js";
 import { initSystemPanel, loadSystem } from "./panels/system.js";
@@ -37,6 +38,7 @@ initOllamaPanel();
 initModelsPanel();
 initBenchmarkPanel();
 initHistoryPanel();
+initLogsPanel();
 
 // Any action that changes model state reloads the model tables. The benchmark
 // tab reads the same model list and server status, so it repaints with them.
