@@ -115,16 +115,34 @@ def _work(job: dict) -> None:
         job: Internal job record to fill in.
     """
     try:
-        result = ollama_runner.compare_models(
-            models=job["models"],
-            prompts=job["prompts"],
-            config=job["config"],
-            model_configs=job["model_configs"] or None,
+        # One experiment per model: the configuration it races under is its
+        # own when the pairing assigned one, the shared one otherwise.
+        experiments = [
+            {
+                "model": model,
+                "configurations": [entry for entry in job["configurations"] if entry["name"] == model]
+                or [{"name": model, "options": dict(job["config"])}],
+            }
+            for model in job["models"]
+        ]
+
+        core_result = ollama_runner.run_benchmark(
+            experiments=experiments,
+            shared_prompts=job["prompts"],
             include_output=job["include_output"],
             cancellation=job["token"],
             repetitions=job["repetitions"],
             on_progress=lambda step: _record_progress(job, step),
         )
+
+        # The cross-model verdict is the comparison's across-models half; the
+        # renderer reads the same flat shape it always has.
+        result = {
+            **core_result,
+            "significance": (core_result.get("significance") or {}).get(
+                "across_models"
+            ),
+        }
     except OperationCancelled:
         outcome = {
             "status": "cancelled",

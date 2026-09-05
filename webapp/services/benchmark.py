@@ -106,15 +106,30 @@ def _work(job: dict) -> None:
         job: Internal job record to fill in.
     """
     try:
-        result = ollama_runner.compare_tests(
-            model=job["model"],
-            prompts=job["prompts"],
-            configurations=job["configurations"],
+        core_result = ollama_runner.run_benchmark(
+            experiments=[
+                {
+                    "model": job["model"],
+                    "configurations": job["configurations"],
+                }
+            ],
+            shared_prompts=job["prompts"],
             include_output=job["include_output"],
             cancellation=job["token"],
             repetitions=job["repetitions"],
             on_progress=lambda step: _record_progress(job, step),
         )
+
+        # The single-model run keeps the shape the results page, the apply form
+        # and the history store have always read: the model named at the top,
+        # its flat significance assessment in place of the two-way one.
+        result = {
+            **core_result,
+            "model": job["model"],
+            "significance": (core_result.get("significance") or {}).get(
+                "by_model", {}
+            ).get(job["model"]),
+        }
     except OperationCancelled:
         # Core discards partial results and unloads the model it loaded, so a
         # cancelled run leaves nothing behind but its log entry.
