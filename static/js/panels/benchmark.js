@@ -349,6 +349,41 @@ function renderPlan() {
     return;
   }
 
+  // The factors behind the total, in run order. Configurations only appear
+  // when the plan actually varies them; the repetition count only earns its
+  // place when it is above one.
+  const factors = [];
+
+  factors.push(
+    tn(plan.models, "bench.factorModel", "bench.factorModels", {
+      n: plan.models,
+    })
+  );
+
+  if (plan.kind === "configs") {
+    factors.push(
+      tn(plan.configs, "bench.factorConfig", "bench.factorConfigs", {
+        n: plan.configs,
+      })
+    );
+  }
+
+  factors.push(
+    tn(plan.prompts, "bench.factorPrompt", "bench.factorPrompts", {
+      n: plan.prompts,
+    })
+  );
+
+  if (plan.reps > 1) {
+    factors.push(
+      tn(plan.reps, "bench.factorRep", "bench.factorReps", { n: plan.reps })
+    );
+  }
+
+  const counts = `<span class="bench-plan-counts" dir="ltr">${escapeHtml(
+    factors.join(" × ")
+  )} = ${plan.runs}</span>`;
+
   planEl.className = `bench-plan is-${plan.kind}`;
   planEl.innerHTML = `
     <span class="bench-plan-badge">${escapeHtml(t(`bench.plan.${plan.kind}`))}</span>
@@ -360,7 +395,8 @@ function renderPlan() {
         reps: plan.reps,
         runs: plan.runs,
       })
-    )}</span>`;
+    )}</span>
+    ${counts}`;
 }
 
 /** Refresh everything that depends on the current setup. */
