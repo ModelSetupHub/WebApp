@@ -13,7 +13,11 @@ background job and the browser polls:
     POST /api/benchmark/apply      create a model copy with the winner's options
 """
 
-from flask import Blueprint, jsonify, request
+import csv
+import io
+import json
+
+from flask import Blueprint, Response, jsonify, request
 
 from MSHCore.ollama import model as ollama_model
 
@@ -184,6 +188,100 @@ def api_benchmark_apply():
         )
 
     return call_core(ollama_model.configure_model, model, target, options)
+
+
+def _download(response, filename):
+    """Attach the download headers the page saves files through.
+
+    Args:
+        response: The response body to offer for download.
+        filename: File name suggested to the browser.
+
+    Returns:
+        Response: The same response with Content-Disposition attached.
+    """
+    response.headers["Content-Disposition"] = (
+        f'attachment; filename="{filename}"'
+    )
+
+    return response
+
+
+@blueprint.route("/results-json", methods=["POST"])
+def api_benchmark_results_json():
+    """Download the finished run's result as one JSON document."""
+    payload = body()
+    result = payload.get("result")
+
+    if not isinstance(result, dict):
+        return fail("No benchmark result was supplied", 400)
+
+    return _download(
+        jsonify(result),
+        f"benchmark-{payload.get('id') or 'results'}.json",
+    )
+
+
+@blueprint.route("/results-csv", methods=["POST"])
+def api_benchmark_results_csv():
+    """Download the finished run's summary table as CSV.
+
+    One row per test: the metrics the results table shows, so the file drops
+    straight into a spreadsheet.
+    """
+    payload = body()
+    result = payload.get("result")
+
+    if not isinstance(result, dict):
+        return fail("No benchmark result was supplied", 400)
+
+    tests = result.get("tests")
+
+    if not isinstance(tests, list) or not tests:
+        return fail("No benchmark result was supplied", 400)
+
+    columns = [
+        ("average_output_tokens_per_second", "output tok/s"),
+        ("average_prompt_tokens_per_second", "prompt tok/s"),
+        ("average_duration_seconds", "seconds"),
+        ("average_ttft_seconds", "ttft s"),
+        ("output_tokens_per_second_stddev", "output noise"),
+        ("total_output_tokens", "output tokens"),
+        ("vram_used_mb", "vram MB"),
+        ("gpu_temperature_c", "gpu C"),
+    ]
+
+    # The per-test summary nests inside each test; flatten it into rows first.
+    rows = []
+
+    for test in tests:
+        summary = test.get("summary") or {}
+        row = {"configuration": test.get("name")}
+
+        for key, header in columns:
+            row[header] = summary.get(key)
+
+        results = test.get("results") or []
+        row["prompts"] = len(results)
+        row["failed"] = sum(
+            1 for entry in results if not entry.get("success")
+        )
+        rows.append(row)
+
+    output = io.StringIO()
+    writer = csv.DictWriter(
+        output,
+        fieldnames=["configuration"]
+        + [header for _, header in columns]
+        + ["prompts", "failed"],
+    )
+    writer.writeheader()
+    writer.writerows(rows)
+
+    return _download(
+        Response(output.getvalue(), mimetype="text/csv"),
+        f"benchmark-{payload.get('id') or 'results'}.csv",
+    )
 
 
 @blueprint.route("/export", methods=["POST"])

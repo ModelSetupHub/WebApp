@@ -1076,6 +1076,37 @@ function setRunning(running) {
 }
 
 /**
+ * Download the finished job's result through one of the results endpoints.
+ *
+ * @param {string} format "csv" or "json".
+ * @param {object} job The finished job snapshot.
+ */
+async function downloadResult(format, job) {
+  const response = await fetch(
+    format === "csv" ? "/api/benchmark/results-csv" : "/api/benchmark/results-json",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: job.id, result: job.result }),
+    }
+  );
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.error || `Request failed (${response.status})`);
+  }
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = `benchmark-${job.id}.${format}`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+/**
  * Apply a job snapshot to the page.
  *
  * @param {object|null} job Snapshot from the run or status endpoint.
@@ -1131,6 +1162,20 @@ function applyJob(job) {
       metaEl.textContent = "";
     });
   }
+
+  resultsEl.querySelectorAll("[data-results-download]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const restore = setButtonBusy(button);
+
+      try {
+        await downloadResult(button.dataset.resultsDownload, job);
+      } catch (error) {
+        toast("error", t("bench.exportFailed"), error.message);
+      } finally {
+        restore();
+      }
+    });
+  });
 }
 
 /** Poll whichever status endpoint the running job belongs to. */

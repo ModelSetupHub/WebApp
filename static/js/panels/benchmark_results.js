@@ -573,7 +573,10 @@ function bindApply(el, job) {
  *     endpoint the discard button posts to — the cross-model drawer passes
  *     its own, since the two jobs live on different endpoints.
  */
-export function renderResults(el, job, { discardEndpoint = "/api/benchmark/clear" } = {}) {
+export function renderResults(el, job, {
+  discardEndpoint = "/api/benchmark/clear",
+  downloadBase = null,
+} = {}) {
   const result = job.result || {};
   const tests = result.tests || [];
 
@@ -620,6 +623,16 @@ export function renderResults(el, job, { discardEndpoint = "/api/benchmark/clear
         </div>
         <div class="btn-row">
           ${job.history_id ? `<span class="chip">${escapeHtml(t("bench.savedToHistory"))}</span>` : ""}
+          ${
+            downloadBase
+              ? `<button type="button" class="btn btn-sm" data-results-download="csv">${escapeHtml(
+                  t("bench.exportCsv")
+                )}</button>
+          <button type="button" class="btn btn-sm" data-results-download="json">${escapeHtml(
+            t("bench.exportJson")
+          )}</button>`
+              : ""
+          }
           <button type="button" class="btn btn-sm" data-results-discard>${escapeHtml(
             t("bench.discardResults")
           )}</button>
@@ -646,5 +659,8 @@ export function renderResults(el, job, { discardEndpoint = "/api/benchmark/clear
 
   return {
     discardButton: el.querySelector("[data-results-discard]"),
+    downloadButtons: downloadBase
+      ? [...el.querySelectorAll("[data-results-download]")]
+      : [],
   };
 }

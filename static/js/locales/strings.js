@@ -927,6 +927,10 @@ export const STRINGS = {
   "bench.applied": { en: "Model created", fa: "مدل ساخته شد" },
   "bench.applyFailed": { en: "Could not create the model", fa: "ساخت مدل ناموفق بود" },
 
+  // ---------- Benchmark: result downloads ----------
+  "bench.exportCsv": { en: "CSV", fa: "CSV" },
+  "bench.exportJson": { en: "JSON", fa: "JSON" },
+
   // ---------- Benchmark: several models in one run ----------
   "bench.resultsHeadModels": {
     en: "{n} model(s) compared",
